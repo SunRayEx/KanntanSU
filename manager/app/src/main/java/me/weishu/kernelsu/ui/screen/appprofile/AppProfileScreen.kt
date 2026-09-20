@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.screen.appprofile
 
 import android.widget.Toast
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -21,7 +22,6 @@ import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
-import me.weishu.kernelsu.ui.util.LocalSnackbarHost
 import me.weishu.kernelsu.ui.util.forceStopApp
 import me.weishu.kernelsu.ui.util.getSepolicy
 import me.weishu.kernelsu.ui.util.launchApp
@@ -35,7 +35,7 @@ fun AppProfileScreen(uid: Int) {
     val uiMode = LocalUiMode.current
     val navigator = LocalNavigator.current
     val context = LocalContext.current
-    val snackbarHost = LocalSnackbarHost.current
+    val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val viewModel: SuperUserViewModel = viewModel()
     val appGroupState = remember(uid) {
@@ -52,16 +52,18 @@ fun AppProfileScreen(uid: Int) {
         return
     }
 
-    val packageName = primaryAppInfo.packageName
+    val packageName = primaryAppInfo.profileKey
     val sharedUserId = remember(uid) {
         primaryAppInfo.packageInfo.sharedUserId
             ?: appGroup.apps.firstOrNull { it.packageInfo.sharedUserId != null }?.packageInfo?.sharedUserId
             ?: ""
     }
 
-    val initialProfile = remember(uid, packageName) {
-        Natives.getAppProfile(packageName, uid).also {
-            if (it.allowSu) {
+    val initialProfile = remember(uid, packageName, primaryAppInfo.special) {
+        Natives.getAppProfile(packageName, uid).let {
+            if (primaryAppInfo.special) it.copy(allowSu = false) else it
+        }.also {
+            if (it.allowSu && !primaryAppInfo.special) {
                 it.rules = getSepolicy(packageName)
             }
         }
@@ -107,23 +109,29 @@ fun AppProfileScreen(uid: Int) {
         },
         onProfileChange = { updatedProfile ->
             scope.launch {
-                if (updatedProfile.allowSu) {
+                val profileToSave = if (primaryAppInfo.special) {
+                    updatedProfile.copy(allowSu = false)
+                } else {
+                    updatedProfile
+                }
+                if (profileToSave.allowSu) {
                     if (uid < 2000 && uid != 1000) {
                         showMessage(suNotAllowed)
                         return@launch
                     }
-                    if (!updatedProfile.rootUseDefault
-                        && updatedProfile.rules.isNotEmpty()
-                        && !setSepolicy(profile.name, updatedProfile.rules)
+                    if (!profileToSave.rootUseDefault
+                        && profileToSave.rules.isNotEmpty()
+                        && !primaryAppInfo.special
+                        && !setSepolicy(profileToSave.name, profileToSave.rules)
                     ) {
                         showMessage(failToUpdateSepolicy)
                         return@launch
                     }
                 }
-                if (!Natives.setAppProfile(updatedProfile)) {
+                if (!Natives.setAppProfile(profileToSave)) {
                     showMessage(failToUpdateAppProfile)
                 } else {
-                    profile = updatedProfile
+                    profile = profileToSave
                     if (uiMode == UiMode.Material) {
                         viewModel.loadAppList()
                     }
@@ -141,6 +149,7 @@ fun AppProfileScreen(uid: Int) {
         UiMode.Material -> AppProfileScreenMaterial(
             state = state,
             actions = actions,
+            snackBarHost = snackbarHost,
         )
     }
 }

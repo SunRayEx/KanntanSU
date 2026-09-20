@@ -16,6 +16,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +48,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
@@ -51,7 +56,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
@@ -67,6 +75,28 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.Search
 import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+
+/** Like `padding(top = …)` but reads [top] in the layout phase, so a frame-rate value relayouts instead of recomposing. */
+internal fun Modifier.deferredTopPadding(top: () -> Dp): Modifier = layout { measurable, constraints ->
+    val topPx = top().roundToPx().coerceAtLeast(0)
+    val placeable = measurable.measure(
+        Constraints(
+            minWidth = constraints.minWidth,
+            maxWidth = constraints.maxWidth,
+            minHeight = (constraints.minHeight - topPx).coerceAtLeast(0),
+            maxHeight = if (constraints.maxHeight == Constraints.Infinity) {
+                Constraints.Infinity
+            } else {
+                (constraints.maxHeight - topPx).coerceAtLeast(0)
+            }
+        )
+    )
+    val width = constraints.constrainWidth(placeable.width)
+    val height = constraints.constrainHeight(placeable.height + topPx)
+    layout(width, height) {
+        placeable.place(0, topPx)
+    }
+}
 
 // Search Box Composable
 @Composable
@@ -114,7 +144,16 @@ fun SearchStatus.SearchPager(
             .drawBehind { drawRect(surfaceColor.copy(alpha = surfaceAlpha)) }
             .semantics { onClick { false } }
             .then(
-                if (!searchStatus.isCollapsed()) Modifier.pointerInput(Unit) { } else Modifier
+                if (!searchStatus.isCollapsed()) {
+                    Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures { }
+                        }
+                        .draggable(
+                            state = rememberDraggableState { },
+                            orientation = Orientation.Horizontal,
+                        )
+                } else Modifier
             )
     ) {
         Row(

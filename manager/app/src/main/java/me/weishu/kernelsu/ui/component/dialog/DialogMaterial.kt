@@ -2,9 +2,6 @@ package me.weishu.kernelsu.ui.component.dialog
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,19 +15,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import me.weishu.kernelsu.ui.component.GithubMarkdown
-import me.weishu.kernelsu.ui.component.Markdown
+import me.weishu.kernelsu.ui.component.markdown.MarkdownContent
+import me.weishu.kernelsu.ui.component.material.ExpressiveDialog
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun LoadingDialogMaterial(showDialog: MutableState<Boolean>) {
+fun LoadingDialogMaterial(
+    showDialog: MutableState<Boolean>,
+) {
     if (showDialog.value) {
         Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
+            onDismissRequest = { },
+            // Keep the dialog non-dismissible
+            properties = DialogProperties(
+                dismissOnClickOutside = false,
+                dismissOnBackPress = false,
+            )
         ) {
             Surface(
-                modifier = Modifier.size(100.dp), shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.size(100.dp), shape = MaterialTheme.shapes.extraLarge
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -50,17 +52,17 @@ fun ConfirmDialogMaterial(
     showDialog: MutableState<Boolean>
 ) {
     if (showDialog.value) {
-        AlertDialog(
+        ExpressiveDialog(
             onDismissRequest = {
                 dismiss()
                 showDialog.value = false
             },
             title = { Text(visuals.title) },
-            text = {
-                visuals.content?.let { content ->
+            text = visuals.content?.let { content ->
+                {
                     when {
-                        visuals.isMarkdown -> Markdown(content = content)
-                        visuals.isHtml -> GithubMarkdown(content = content, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                        visuals.isMarkdown -> MarkdownContent(content = content, isMarkdown = true)
+                        visuals.isHtml -> MarkdownContent(content = content, isMarkdown = false)
                         else -> Text(text = content)
                     }
                 }

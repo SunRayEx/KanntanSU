@@ -1,5 +1,7 @@
 package me.weishu.kernelsu.ui.viewmodel
 
+import android.system.OsConstants
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -8,9 +10,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.Natives
+import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
+import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.screen.settings.SettingsUiState
 import me.weishu.kernelsu.ui.theme.ColorMode
 
@@ -36,9 +41,10 @@ class SettingsViewModel(
             val enableBlur = repo.enableBlur
             val enableFloatingBottomBar = repo.enableFloatingBottomBar
             val enableFloatingBottomBarBlur = repo.enableFloatingBottomBarBlur
+            val enableNavigationBadge = repo.enableNavigationBadge
             val pageScale = repo.pageScale
+            val moduleDescriptionMaxLines = repo.moduleDescriptionMaxLines
             val enableWebDebugging = repo.enableWebDebugging
-            val enableSmoothCorner = repo.enableSmoothCorner
             val colorStyle = repo.colorStyle
             val colorSpec = repo.colorSpec
             val isLkmMode = repo.isLkmMode()
@@ -52,6 +58,8 @@ class SettingsViewModel(
 
             val kernelUmountStatus = repo.getKernelUmountStatus()
             val isKernelUmountEnabled = repo.isKernelUmountEnabled()
+            val selinuxHideStatus = repo.getSelinuxHideStatus()
+            val isSelinuxHideEnabled = repo.isSelinuxHideEnabled()
             val sulogStatus = repo.getSulogStatus()
             val isSulogEnabled = repo.getSulogPersistValue() == 1L
             val adbRootStatus = repo.getAdbRootStatus()
@@ -59,6 +67,7 @@ class SettingsViewModel(
             val isDefaultUmountModules = repo.isDefaultUmountModules()
             val uiMode = repo.uiMode
             val autoJailbreak = repo.autoJailbreak
+            val useSoftReboot = repo.useSoftReboot
             val isLateLoadMode = Natives.isLateLoadMode
 
             _uiState.update {
@@ -73,9 +82,10 @@ class SettingsViewModel(
                     enableBlur = enableBlur,
                     enableFloatingBottomBar = enableFloatingBottomBar,
                     enableFloatingBottomBarBlur = enableFloatingBottomBarBlur,
+                    enableNavigationBadge = enableNavigationBadge,
                     pageScale = pageScale,
+                    moduleDescriptionMaxLines = moduleDescriptionMaxLines,
                     enableWebDebugging = enableWebDebugging,
-                    enableSmoothCorner = enableSmoothCorner,
                     colorStyle = colorStyle,
                     colorSpec = colorSpec,
                     suCompatStatus = suCompatStatus,
@@ -85,11 +95,14 @@ class SettingsViewModel(
                     isAdbRootEnabled = isAdbRootEnabled,
                     kernelUmountStatus = kernelUmountStatus,
                     isKernelUmountEnabled = isKernelUmountEnabled,
+                    selinuxHideStatus = selinuxHideStatus,
+                    isSelinuxHideEnabled = isSelinuxHideEnabled,
                     sulogStatus = sulogStatus,
                     isSulogEnabled = isSulogEnabled,
                     isDefaultUmountModules = isDefaultUmountModules,
                     isLkmMode = isLkmMode,
                     autoJailbreak = autoJailbreak,
+                    useSoftReboot = useSoftReboot,
                     isLateLoadMode = isLateLoadMode,
                 )
             }
@@ -200,19 +213,24 @@ class SettingsViewModel(
         _uiState.update { it.copy(enableFloatingBottomBarBlur = enabled) }
     }
 
+    fun setEnableNavigationBadge(enabled: Boolean) {
+        repo.enableNavigationBadge = enabled
+        _uiState.update { it.copy(enableNavigationBadge = enabled) }
+    }
+
     fun setPageScale(scale: Float) {
         repo.pageScale = scale
         _uiState.update { it.copy(pageScale = scale) }
     }
 
+    fun setModuleDescriptionMaxLines(lines: Int) {
+        repo.moduleDescriptionMaxLines = lines
+        _uiState.update { it.copy(moduleDescriptionMaxLines = lines) }
+    }
+
     fun setEnableWebDebugging(enabled: Boolean) {
         repo.enableWebDebugging = enabled
         _uiState.update { it.copy(enableWebDebugging = enabled) }
-    }
-
-    fun setEnableSmoothCorner(enabled: Boolean) {
-        repo.enableSmoothCorner = enabled
-        _uiState.update { it.copy(enableSmoothCorner = enabled) }
     }
 
     fun setSuCompatMode(mode: Int) {
@@ -252,9 +270,37 @@ class SettingsViewModel(
         }
     }
 
+    fun setSelinuxHideEnabled(enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val status = repo.setSelinuxHideEnabled(enabled)
+            repo.execKsudFeatureSave()
+            _uiState.update { it.copy(isSelinuxHideEnabled = enabled) }
+            when (status) {
+                0 -> {}
+                -OsConstants.EAGAIN -> {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(ksuApp, R.string.settings_selinux_hide_reboot_required,
+                            Toast.LENGTH_LONG).show()
+                    }
+                }
+                else -> {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(ksuApp, ksuApp.getString(R.string.settings_selinux_hide_failed, status),
+                            Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
     fun setAutoJailbreak(enabled: Boolean) {
         repo.autoJailbreak = enabled
         _uiState.update { it.copy(autoJailbreak = enabled) }
+    }
+
+    fun setUseSoftReboot(enabled: Boolean) {
+        repo.useSoftReboot = enabled
+        _uiState.update { it.copy(useSoftReboot = enabled) }
     }
 
     fun setSulogEnabled(enabled: Boolean) {

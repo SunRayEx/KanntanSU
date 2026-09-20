@@ -31,7 +31,7 @@ fun ColorPaletteScreen() {
     val currentColorSpec = try {
         ColorSpec.SpecVersion.valueOf(uiState.colorSpec)
     } catch (_: Exception) {
-        ColorSpec.SpecVersion.Default
+        ColorSpec.SpecVersion.SPEC_2025
     }
     val state = ColorPaletteUiState(
         uiState = uiState,
@@ -50,13 +50,14 @@ fun ColorPaletteScreen() {
         onSetEnableBlur = viewModel::setEnableBlur,
         onSetEnableFloatingBottomBar = viewModel::setEnableFloatingBottomBar,
         onSetEnableFloatingBottomBarBlur = viewModel::setEnableFloatingBottomBarBlur,
+        onSetEnableNavigationBadge = viewModel::setEnableNavigationBadge,
         onSetEnablePredictiveBack = {
             viewModel.setEnablePredictiveBack(it)
             KernelSUApplication.setEnableOnBackInvokedCallback(context.applicationInfo, it)
             activity?.recreate()
         },
-        onSetEnableSmoothCorner = viewModel::setEnableSmoothCorner,
         onSetPageScale = viewModel::setPageScale,
+        onSetModuleDescriptionMaxLines = viewModel::setModuleDescriptionMaxLines,
     )
 
     when (LocalUiMode.current) {
