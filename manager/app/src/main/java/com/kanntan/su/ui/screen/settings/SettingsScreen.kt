@@ -16,16 +16,34 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Switch
+import androidx.compose.material.SwitchDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Adb
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.GetApp
+import androidx.compose.material.icons.filled.LayersClear
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,7 +83,7 @@ fun SettingsScreen(
         ) {
             SettingsSection(title = "Update") {
                 SettingsSwitchItem(
-                    icon = "↑",
+                    icon = Icons.Default.Update,
                     title = "检查更新",
                     summary = "在应用启动后, 自动检查是否有最新版本",
                     checked = uiState.checkUpdate,
@@ -73,7 +91,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSwitchItem(
-                    icon = "■",
+                    icon = Icons.Default.GetApp,
                     title = "检查模块更新",
                     summary = "在应用启动后, 自动检查是否有最新版本的模块",
                     checked = uiState.checkModuleUpdate,
@@ -85,7 +103,7 @@ fun SettingsScreen(
 
             SettingsSection(title = "Theme") {
                 SettingsClickItem(
-                    icon = "✎",
+                    icon = Icons.Default.Palette,
                     title = "自定义主题",
                     summary = "更改您的主页, 背景和强调色",
                     onClick = { actions.onOpenThemeCustomization() }
@@ -96,7 +114,7 @@ fun SettingsScreen(
 
             SettingsSection(title = "App Profile") {
                 SettingsClickItem(
-                    icon = "⊞",
+                    icon = Icons.Default.Apps,
                     title = "App Profile 模板",
                     summary = "管理本地和在线的App Profile 模板",
                     onClick = { actions.onOpenAppProfileTemplate() }
@@ -107,7 +125,7 @@ fun SettingsScreen(
 
             SettingsSection(title = "Feature") {
                 SettingsSwitchItem(
-                    icon = "▬",
+                    icon = Icons.Default.Terminal,
                     title = "传统 SU 命令支持",
                     summary = "允许通过 /system/bin/su 获取 Root 权限",
                     checked = uiState.suCompatMode == 1,
@@ -115,7 +133,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSwitchItem(
-                    icon = "⊘",
+                    icon = Icons.Default.LayersClear,
                     title = "卸载模块 (内核层面)",
                     summary = "在内核层面上, 针对需要的应用卸载模块",
                     checked = uiState.isKernelUmountEnabled,
@@ -123,7 +141,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSwitchItem(
-                    icon = "▤",
+                    icon = Icons.Default.Article,
                     title = "SU 日志",
                     summary = "将与 Root 相关的事件记录到 KernelSU sulog 日志文件中",
                     checked = uiState.isSulogEnabled,
@@ -131,7 +149,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSwitchItem(
-                    icon = "⊙",
+                    icon = Icons.Default.Adb,
                     title = "ADB Root",
                     summary = "以 Root 权限运行 adbd 守护进程",
                     checked = uiState.isAdbRootEnabled,
@@ -139,7 +157,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSwitchItem(
-                    icon = "⊡",
+                    icon = Icons.Default.Unarchive,
                     title = "默认卸载模块",
                     summary = "启用后会将所有未自定义 Profile 的应用移除所有模块对系统的修改",
                     checked = uiState.isDefaultUmountModules,
@@ -147,22 +165,23 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSwitchItem(
-                    icon = "⊙",
+                    icon = Icons.Default.FlashOn,
                     title = "自动越狱",
                     summary = "开机检测到 SELinux 宽容模式 自动使用 Magica 提权。需要授予本应用自启动权限",
+                    enabled = uiState.isLateLoadMode,
                     checked = uiState.autoJailbreak,
                     onCheckedChange = { viewModel.setAutoJailbreak(it) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsClickItem(
-                    icon = "⊡",
+                    icon = Icons.Default.Delete,
                     title = "卸载 KernelSU",
                     summary = "选项卸载或还原 KernelSU 对你设备的改动",
                     onClick = { actions.onUninstallKernelSU() }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsClickItem(
-                    icon = "▤",
+                    icon = Icons.Default.BugReport,
                     title = "发送日志",
                     summary = "将 KernelSU 日志文件保存在手机内或者分享给别人",
                     onClick = { actions.onSendLog(context) }
@@ -182,21 +201,17 @@ private fun SettingsHeader(onNavigateBack: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(colors.secondaryColor)
-                .clickable(onClick = onNavigateBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "<",
-                color = colors.onSecondaryColor,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+        IconButton(onClick = onNavigateBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = colors.onPrimaryColor,
+                modifier = Modifier.size(24.dp)
             )
         }
+
         Spacer(modifier = Modifier.width(16.dp))
+
         Text(
             text = "Setting",
             color = colors.onPrimaryColor,
@@ -232,17 +247,18 @@ private fun SettingsSection(
 
 @Composable
 private fun SettingsSwitchItem(
-    icon: String,
+    icon: ImageVector,
     title: String,
     summary: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = { onCheckedChange(!checked) })
+            .clickable(enabled = enabled, onClick = { onCheckedChange(!checked) })
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -257,11 +273,11 @@ private fun SettingsSwitchItem(
                     .background(colors.primaryColor),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = icon,
-                    color = colors.onPrimaryColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
@@ -270,7 +286,8 @@ private fun SettingsSwitchItem(
             Column {
                 Text(
                     text = title,
-                    color = colors.onSecondaryColor,
+                    color = if (enabled) colors.onSecondaryColor
+                        else colors.onSecondaryColor.copy(alpha = 0.4f),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -282,14 +299,20 @@ private fun SettingsSwitchItem(
             }
         }
 
+        // Material Design 2 switch (not the MD3 component).
         Switch(
             checked = checked,
+            enabled = enabled,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = colors.onPrimaryColor,
                 checkedTrackColor = colors.primaryColor,
-                uncheckedThumbColor = colors.onSecondaryColor,
-                uncheckedTrackColor = colors.primaryColor.copy(alpha = 0.3f)
+                uncheckedThumbColor = colors.primaryColor,
+                uncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.4f),
+                disabledCheckedThumbColor = colors.onPrimaryColor,
+                disabledUncheckedThumbColor = colors.onSecondaryColor.copy(alpha = 0.4f),
+                disabledCheckedTrackColor = colors.primaryColor.copy(alpha = 0.4f),
+                disabledUncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.2f)
             )
         )
     }
@@ -297,7 +320,7 @@ private fun SettingsSwitchItem(
 
 @Composable
 private fun SettingsClickItem(
-    icon: String,
+    icon: ImageVector,
     title: String,
     summary: String,
     onClick: () -> Unit
@@ -321,11 +344,11 @@ private fun SettingsClickItem(
                     .background(colors.primaryColor),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = icon,
-                    color = colors.onPrimaryColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
@@ -346,10 +369,11 @@ private fun SettingsClickItem(
             }
         }
 
-        Text(
-            text = ">",
-            color = colors.onSecondaryColor.copy(alpha = 0.5f),
-            fontSize = 14.sp
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = colors.onSecondaryColor.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
         )
     }
 }

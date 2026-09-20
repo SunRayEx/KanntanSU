@@ -16,8 +16,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Switch
+import androidx.compose.material.SwitchDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -155,22 +166,16 @@ private fun ModuleHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(colors.secondaryColor)
-                    .clickable(onClick = onBackClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "<",
-                    color = colors.onSecondaryColor,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Text(
                 text = "Modules",
@@ -180,18 +185,12 @@ private fun ModuleHeader(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(colors.secondaryColor)
-                .clickable(onClick = onRefreshClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "≡",
-                color = colors.onPrimaryColor,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+        IconButton(onClick = onRefreshClick) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Refresh",
+                tint = colors.onPrimaryColor,
+                modifier = Modifier.size(24.dp)
             )
         }
     }
@@ -290,14 +289,6 @@ private fun ModuleListItem(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(colors.primaryColor)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
                     Column {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -334,20 +325,16 @@ private fun ModuleListItem(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(if (module.enabled) colors.primaryColor else colors.secondaryColor)
-                        .clickable(onClick = onClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (module.enabled) "ON" else "OFF",
-                        color = if (module.enabled) colors.onPrimaryColor else colors.onSecondaryColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                Switch(
+                    checked = module.enabled,
+                    onCheckedChange = { onClick() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = colors.onPrimaryColor,
+                        checkedTrackColor = colors.primaryColor,
+                        uncheckedThumbColor = colors.primaryColor,
+                        uncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.4f)
                     )
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -370,7 +357,7 @@ private fun ModuleListItem(
                 if (module.hasActionScript) {
                     ActionButton(
                         text = "执行",
-                        icon = "▶",
+                        icon = Icons.Default.PlayArrow,
                         onClick = onExecuteAction
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -379,7 +366,7 @@ private fun ModuleListItem(
                 if (module.hasWebUi) {
                     ActionButton(
                         text = "打开",
-                        icon = "<>",
+                        icon = Icons.Default.Public,
                         onClick = onOpenWebUi
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -387,7 +374,7 @@ private fun ModuleListItem(
 
                 ActionButton(
                     text = "卸载",
-                    icon = "■",
+                    icon = Icons.Default.Delete,
                     onClick = onUninstall
                 )
             }
@@ -398,7 +385,7 @@ private fun ModuleListItem(
 @Composable
 private fun ActionButton(
     text: String,
-    icon: String,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
     val colors = kanntanColors()
@@ -411,11 +398,11 @@ private fun ActionButton(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = icon,
-                color = colors.onSecondaryColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.onSecondaryColor,
+                modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(

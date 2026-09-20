@@ -3,6 +3,7 @@ package com.kanntan.su
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -128,7 +129,12 @@ private fun MainNavigation() {
     val settingsViewModel: SettingsViewModel = viewModel()
     val sulogViewModel: SulogViewModel = viewModel()
     val installViewModel: InstallViewModel = viewModel()
-    
+
+    // System back: while sitting on a pushed page, go back to home instead of exiting the app.
+    BackHandler(enabled = currentScreen != Screen.HOME) {
+        currentScreen = Screen.HOME
+    }
+
     CompositionLocalProvider(LocalKanntanTheme provides themeState) {
         Box(modifier = Modifier.fillMaxSize().background(colors.middleColor)) {
             AnimatedContent(

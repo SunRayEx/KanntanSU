@@ -17,9 +17,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Switch
+import androidx.compose.material.SwitchDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +35,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -138,18 +145,12 @@ private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit)
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(colors.secondaryColor)
-                    .clickable(onClick = onNavigateBack),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "<",
-                    color = colors.onSecondaryColor,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
@@ -163,18 +164,12 @@ private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit)
             )
         }
 
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(colors.secondaryColor)
-                .clickable(onClick = onOpenSulog),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "≡",
-                color = colors.onPrimaryColor,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+        IconButton(onClick = onOpenSulog) {
+            Icon(
+                imageVector = Icons.Default.Article,
+                contentDescription = "Refresh",
+                tint = colors.onPrimaryColor,
+                modifier = Modifier.size(24.dp)
             )
         }
     }
@@ -224,21 +219,21 @@ private fun SuperUserAppItem(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .alpha(if (enabled) 1f else 0.35f)
-                        .background(if (group.anyAllowSu) colors.primaryColor else colors.secondaryColor)
-                        .clickable(enabled = enabled, onClick = onClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (group.anyAllowSu) "ON" else "OFF",
-                        color = if (group.anyAllowSu) colors.onPrimaryColor else colors.onSecondaryColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                Switch(
+                    checked = group.anyAllowSu,
+                    enabled = enabled,
+                    onCheckedChange = { onClick() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = colors.onPrimaryColor,
+                        checkedTrackColor = colors.primaryColor,
+                        uncheckedThumbColor = colors.primaryColor,
+                        uncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.4f),
+                        disabledCheckedThumbColor = colors.onPrimaryColor,
+                        disabledUncheckedThumbColor = colors.onSecondaryColor.copy(alpha = 0.4f),
+                        disabledCheckedTrackColor = colors.primaryColor.copy(alpha = 0.4f),
+                        disabledUncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.2f)
                     )
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -314,11 +309,11 @@ private fun SelectorButton(
             contentAlignment = Alignment.Center
         ) {
             if (isSelected) {
-                Text(
-                    text = "✓",
-                    color = colors.onPrimaryColor,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
