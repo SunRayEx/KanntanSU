@@ -55,7 +55,6 @@ fun ModuleScreen(
         onRequestUpdateConfirmation = { _, _ -> },
         onRequestUninstallConfirmation = {},
         onDismissConfirmRequest = {},
-        onConsumeEffect = {},
         onConfirmUpdate = {},
         onOpenRepo = {},
         onToggleSortActionFirst = {},

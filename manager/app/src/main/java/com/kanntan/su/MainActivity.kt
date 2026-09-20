@@ -145,7 +145,6 @@ private fun MainNavigation() {
                         onRequestUpdateConfirmation = { module, info -> moduleViewModel.requestUpdateConfirmation(module, info) },
                         onRequestUninstallConfirmation = { module -> moduleViewModel.requestUninstallConfirmation(module) },
                         onDismissConfirmRequest = { moduleViewModel.dismissConfirmRequest() },
-                        onConsumeEffect = { moduleViewModel.consumeEffect() },
                         onConfirmUpdate = {},
                         onOpenRepo = { currentScreen = Screen.MODULE_REPO },
                         onToggleSortActionFirst = { moduleViewModel.toggleSortActionFirst() },
@@ -198,6 +197,7 @@ private fun MainNavigation() {
                         onSearchTextChange = { superUserViewModel.updateSearchText(it) },
                         onSearchStatusChange = { superUserViewModel.updateSearchStatus(it) },
                         onClearSearch = { superUserViewModel.updateSearchText("") },
+                        onUpdateSortConfig = { superUserViewModel.updateSortConfig(it) },
                         onToggleShowSystemApps = { superUserViewModel.toggleShowSystemApps() },
                         onToggleShowOnlyPrimaryUserApps = { superUserViewModel.toggleShowOnlyPrimaryUserApps() },
                         onOpenProfile = { group ->

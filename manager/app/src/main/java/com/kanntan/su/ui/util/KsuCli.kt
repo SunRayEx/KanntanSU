@@ -38,6 +38,7 @@ fun installBoot(
     partition: String?,
     allowShell: Boolean,
     enableAdb: Boolean,
+    forceBackup: Boolean = false,
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
 ): FlashResult {
@@ -48,6 +49,7 @@ fun installBoot(
         partition = partition,
         allowShell = allowShell,
         enableAdb = enableAdb,
+        forceBackup = forceBackup,
         onStdout = onStdout,
         onStderr = onStderr,
     )
