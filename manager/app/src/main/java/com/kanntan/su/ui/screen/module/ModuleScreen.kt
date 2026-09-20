@@ -35,11 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kanntan.su.ui.component.dialog.UninstallDialog
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.ui.screen.module.ModuleActions
 import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
@@ -70,6 +66,8 @@ fun ModuleScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showUninstallDialog by remember { mutableStateOf<Module?>(null) }
+    var lastUninstalled by remember { mutableStateOf<Module?>(null) }
+    val colors = kanntanColors()
 
     LaunchedEffect(Unit) {
         viewModel.initializePreferences()
@@ -79,12 +77,40 @@ fun ModuleScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ContentBackground)
+            .background(colors.secondaryColor)
     ) {
         ModuleHeader(
             onBackClick = onNavigateBack,
             onRefreshClick = { viewModel.fetchModuleList(checkUpdate = true) }
         )
+
+        // Undo strip: uninstalling a module is reversible until reboot, so offer a one-tap revert.
+        lastUninstalled?.let { mod ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.primaryColor)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "已卸载 ${mod.name}",
+                    color = colors.onPrimaryColor,
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "撤销",
+                    color = colors.onPrimaryColor,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable {
+                        viewModel.undoUninstallModule(mod)
+                        lastUninstalled = null
+                    }.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+        }
 
         if (uiState.isRefreshing && !uiState.hasLoaded) {
             LoadingContent()
@@ -106,6 +132,7 @@ fun ModuleScreen(
             moduleName = module.name,
             onConfirm = {
                 viewModel.uninstallModule(module)
+                lastUninstalled = module
                 showUninstallDialog = null
             },
             onDismiss = { showUninstallDialog = null }
@@ -118,10 +145,11 @@ private fun ModuleHeader(
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -130,13 +158,13 @@ private fun ModuleHeader(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureWhite)
+                    .background(colors.secondaryColor)
                     .clickable(onClick = onBackClick),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "<",
-                    color = TextOnBlack,
+                    color = colors.onSecondaryColor,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -146,7 +174,7 @@ private fun ModuleHeader(
 
             Text(
                 text = "Modules",
-                color = TextOnBlack,
+                color = colors.onPrimaryColor,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -155,13 +183,13 @@ private fun ModuleHeader(
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onRefreshClick),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "≡",
-                color = TextOnBlack,
+                color = colors.onPrimaryColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -171,13 +199,14 @@ private fun ModuleHeader(
 
 @Composable
 private fun LoadingContent() {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "Loading...",
-            color = TextOnWhite,
+            color = colors.onSecondaryColor,
             fontSize = 16.sp
         )
     }
@@ -185,6 +214,7 @@ private fun LoadingContent() {
 
 @Composable
 private fun EmptyContent() {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -192,14 +222,14 @@ private fun EmptyContent() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "No Modules",
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Install a module to get started",
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 14.sp
             )
         }
@@ -240,8 +270,9 @@ private fun ModuleListItem(
     onOpenWebUi: () -> Unit,
     onExecuteAction: () -> Unit
 ) {
+    val colors = kanntanColors()
     Card(
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(0.dp)
     ) {
@@ -262,7 +293,7 @@ private fun ModuleListItem(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .background(PureBlack)
+                            .background(colors.primaryColor)
                     )
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -274,11 +305,11 @@ private fun ModuleListItem(
                             if (module.metamodule) {
                                 Text(
                                     text = "META",
-                                    color = PureWhite,
+                                    color = colors.onPrimaryColor,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier
-                                        .background(PureBlack, RoundedCornerShape(2.dp))
+                                        .background(colors.primaryColor, RoundedCornerShape(2.dp))
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -288,7 +319,7 @@ private fun ModuleListItem(
 
                         Text(
                             text = module.name,
-                            color = TextOnWhite,
+                            color = colors.onSecondaryColor,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -297,7 +328,7 @@ private fun ModuleListItem(
 
                         Text(
                             text = "版本: ${module.version}  作者: ${module.author}",
-                            color = TextOnWhite.copy(alpha = 0.7f),
+                            color = colors.onSecondaryColor.copy(alpha = 0.7f),
                             fontSize = 12.sp
                         )
                     }
@@ -306,13 +337,13 @@ private fun ModuleListItem(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(if (module.enabled) PureBlack else PureWhite)
+                        .background(if (module.enabled) colors.primaryColor else colors.secondaryColor)
                         .clickable(onClick = onClick),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (module.enabled) "ON" else "OFF",
-                        color = if (module.enabled) TextOnBlack else TextOnWhite,
+                        color = if (module.enabled) colors.onPrimaryColor else colors.onSecondaryColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -323,7 +354,7 @@ private fun ModuleListItem(
 
             Text(
                 text = module.description,
-                color = TextOnWhite.copy(alpha = 0.7f),
+                color = colors.onSecondaryColor.copy(alpha = 0.7f),
                 fontSize = 12.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -370,9 +401,10 @@ private fun ActionButton(
     icon: String,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier
-            .background(PureWhite, RoundedCornerShape(0.dp))
+            .background(colors.secondaryColor, RoundedCornerShape(0.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
@@ -381,14 +413,14 @@ private fun ActionButton(
         ) {
             Text(
                 text = icon,
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = text,
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )

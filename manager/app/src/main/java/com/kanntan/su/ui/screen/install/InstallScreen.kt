@@ -41,11 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import com.kanntan.su.ui.util.getAvailablePartitions
 import com.kanntan.su.ui.util.getDefaultPartition
 import com.kanntan.su.ui.util.installBoot
@@ -73,6 +69,7 @@ fun InstallScreen(
 
     var partitionSelectionIndex by rememberSaveable { mutableIntStateOf(0) }
     var hasCustomSelected by rememberSaveable { mutableStateOf(false) }
+    val colors = kanntanColors()
 
     val partitions by produceState(initialValue = emptyList()) { value = getAvailablePartitions() }
     val defaultPartition by produceState(initialValue = "") { value = getDefaultPartition() }
@@ -117,7 +114,7 @@ fun InstallScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ContentBackground)
+            .background(colors.secondaryColor)
     ) {
         InstallHeader(onNavigateBack = onNavigateBack)
 
@@ -193,19 +190,19 @@ fun InstallScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .background(PureBlack),
+                        .background(colors.primaryColor),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(
-                            color = PureWhite,
+                            color = colors.onPrimaryColor,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "刷入中...",
-                            color = TextOnBlack,
+                            color = colors.onPrimaryColor,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -216,7 +213,7 @@ fun InstallScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .background(PureBlack)
+                        .background(colors.primaryColor)
                         .clickable {
                             val method = uiState.installMethod
                             if (method == null) {
@@ -254,7 +251,7 @@ fun InstallScreen(
                 ) {
                     Text(
                         text = "开始刷入",
-                        color = TextOnBlack,
+                        color = colors.onPrimaryColor,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -266,23 +263,24 @@ fun InstallScreen(
 
 @Composable
 private fun InstallHeader(onNavigateBack: () -> Unit) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onNavigateBack),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "<",
-                color = TextOnBlack,
+                color = colors.onSecondaryColor,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -290,7 +288,7 @@ private fun InstallHeader(onNavigateBack: () -> Unit) {
         Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = "Install",
-            color = TextOnBlack,
+            color = colors.onPrimaryColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -302,16 +300,17 @@ private fun InstallSection(
     title: String,
     content: @Composable () -> Unit
 ) {
+    val colors = kanntanColors()
     Column {
         Text(
             text = title,
-            color = TextOnWhite.copy(alpha = 0.7f),
+            color = colors.onSecondaryColor.copy(alpha = 0.7f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
         Card(
-            colors = CardDefaults.cardColors(containerColor = PureWhite),
+            colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(8.dp)) { content() }
@@ -326,6 +325,7 @@ private fun InstallMethodItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -337,20 +337,20 @@ private fun InstallMethodItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = summary,
-                color = TextOnWhite.copy(alpha = 0.7f),
+                color = colors.onSecondaryColor.copy(alpha = 0.7f),
                 fontSize = 11.sp
             )
         }
         Box(
             modifier = Modifier
                 .size(24.dp)
-                .background(if (isSelected) PureBlack else PureWhite)
+                .background(if (isSelected) colors.primaryColor else colors.secondaryColor)
         )
     }
 }
@@ -362,6 +362,7 @@ private fun PartitionItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -373,7 +374,7 @@ private fun PartitionItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = if (isDefault) "$partition (默认)" else partition,
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -381,7 +382,7 @@ private fun PartitionItem(
         Box(
             modifier = Modifier
                 .size(24.dp)
-                .background(if (isSelected) PureBlack else PureWhite)
+                .background(if (isSelected) colors.primaryColor else colors.secondaryColor)
         )
     }
 }

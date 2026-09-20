@@ -37,11 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import me.weishu.kernelsu.data.model.RepoModule
 import me.weishu.kernelsu.ui.viewmodel.ModuleRepoViewModel
 
@@ -52,6 +48,7 @@ fun ModuleRepoScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchText by remember { mutableStateOf("") }
+    val colors = kanntanColors()
 
     LaunchedEffect(Unit) {
         if (uiState.modules.isEmpty()) {
@@ -59,7 +56,7 @@ fun ModuleRepoScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ContentBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.secondaryColor)) {
         ModuleRepoHeader(onNavigateBack = onNavigateBack)
 
         ModuleRepoSearchBar(
@@ -72,14 +69,14 @@ fun ModuleRepoScreen(
 
         if (uiState.isRefreshing && uiState.modules.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PureBlack, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = colors.primaryColor, strokeWidth = 3.dp)
             }
         } else if (!uiState.isRefreshing && uiState.modules.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = if (uiState.offline) "Network Offline" else "No Modules Found",
-                        color = TextOnWhite,
+                        color = colors.onSecondaryColor,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -87,13 +84,13 @@ fun ModuleRepoScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Box(
                             modifier = Modifier
-                                .background(PureBlack)
+                                .background(colors.primaryColor)
                                 .clickable(onClick = { viewModel.refresh() })
                                 .padding(horizontal = 24.dp, vertical = 8.dp)
                         ) {
                             Text(
                                 text = "Retry",
-                                color = TextOnBlack,
+                                color = colors.onPrimaryColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -112,7 +109,7 @@ fun ModuleRepoScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = "No Results",
-                        color = TextOnWhite,
+                        color = colors.onSecondaryColor,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -137,26 +134,27 @@ fun ModuleRepoScreen(
 
 @Composable
 private fun ModuleRepoHeader(onNavigateBack: () -> Unit) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onNavigateBack),
             contentAlignment = Alignment.Center
         ) {
-            Text("<", color = TextOnBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("<", color = colors.onPrimaryColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = "Module Repository",
-            color = TextOnBlack,
+            color = colors.onPrimaryColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -168,10 +166,11 @@ private fun ModuleRepoSearchBar(
     searchText: String,
     onSearchTextChange: (String) -> Unit
 ) {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureWhite)
+            .background(colors.secondaryColor)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         BasicTextField(
@@ -182,17 +181,17 @@ private fun ModuleRepoSearchBar(
                 .background(Color(0xFFE8E8E8), RoundedCornerShape(0.dp))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             textStyle = TextStyle(
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 14.sp
             ),
             singleLine = true,
-            cursorBrush = SolidColor(PureBlack),
+            cursorBrush = SolidColor(colors.primaryColor),
             decorationBox = { innerTextField ->
                 Box {
                     if (searchText.isEmpty()) {
                         Text(
                             text = "Search modules...",
-                            color = TextOnWhite.copy(alpha = 0.4f),
+                            color = colors.onSecondaryColor.copy(alpha = 0.4f),
                             fontSize = 14.sp
                         )
                     }
@@ -205,8 +204,9 @@ private fun ModuleRepoSearchBar(
 
 @Composable
 private fun ModuleRepoItem(module: RepoModule) {
+    val colors = kanntanColors()
     Card(
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(0.dp)
     ) {
@@ -217,7 +217,7 @@ private fun ModuleRepoItem(module: RepoModule) {
         ) {
             Text(
                 text = module.moduleName,
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -228,13 +228,13 @@ private fun ModuleRepoItem(module: RepoModule) {
 
             Text(
                 text = "ID: ${module.moduleId}",
-                color = TextOnWhite.copy(alpha = 0.7f),
+                color = colors.onSecondaryColor.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
 
             Text(
                 text = "Author: ${module.authors}",
-                color = TextOnWhite.copy(alpha = 0.7f),
+                color = colors.onSecondaryColor.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
 
@@ -242,7 +242,7 @@ private fun ModuleRepoItem(module: RepoModule) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = module.summary,
-                    color = TextOnWhite.copy(alpha = 0.6f),
+                    color = colors.onSecondaryColor.copy(alpha = 0.6f),
                     fontSize = 12.sp,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
@@ -260,13 +260,13 @@ private fun ModuleRepoItem(module: RepoModule) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "*",
-                            color = TextOnWhite.copy(alpha = 0.5f),
+                            color = colors.onSecondaryColor.copy(alpha = 0.5f),
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = module.stargazerCount.toString(),
-                            color = TextOnWhite.copy(alpha = 0.5f),
+                            color = colors.onSecondaryColor.copy(alpha = 0.5f),
                             fontSize = 12.sp
                         )
                     }
@@ -275,7 +275,7 @@ private fun ModuleRepoItem(module: RepoModule) {
                 if (module.latestReleaseTime.isNotEmpty()) {
                     Text(
                         text = module.latestReleaseTime,
-                        color = TextOnWhite.copy(alpha = 0.5f),
+                        color = colors.onSecondaryColor.copy(alpha = 0.5f),
                         fontSize = 12.sp
                     )
                 }

@@ -27,17 +27,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanntan.su.ui.component.AppIconImage
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
+import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.data.model.AppInfo
 import me.weishu.kernelsu.ui.screen.superuser.GroupedApps
 import me.weishu.kernelsu.ui.screen.superuser.SuperUserActions
@@ -69,25 +67,44 @@ fun SuperUserScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colors = kanntanColors()
+    // Without the kernel module (ksud) flashed, granting root is impossible: the IOCTLs
+    // simply fail. Gate the whole screen in that case instead of offering dead controls.
+    val ksuReady = Natives.isManager
 
     LaunchedEffect(Unit) {
         viewModel.initializePreferences()
         viewModel.loadAppList()
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ContentBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.secondaryColor)) {
         SuperUserHeader(
             onNavigateBack = onNavigateBack,
             onOpenSulog = actions.onOpenSulog
         )
 
+        if (!ksuReady) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.primaryColor)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "KernelSU 未就绪：未检测到内核模块（ksud）。请先刷入后再授予 Root 权限，当前操作无效。",
+                    color = colors.onPrimaryColor,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
         if (uiState.groupedApps.isEmpty() && !uiState.isRefreshing) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No Apps", color = TextOnWhite, fontSize = 18.sp)
+                Text("No Apps", color = colors.onSecondaryColor, fontSize = 18.sp)
             }
         } else if (uiState.isRefreshing && uiState.groupedApps.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PureBlack, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = colors.primaryColor, strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
@@ -100,6 +117,7 @@ fun SuperUserScreen(
                     SuperUserAppItem(
                         group = group,
                         profileType = deriveProfileType(group),
+                        enabled = ksuReady,
                         onClick = { actions.onOpenProfile(group) },
                     )
                 }
@@ -110,10 +128,11 @@ fun SuperUserScreen(
 
 @Composable
 private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -122,13 +141,13 @@ private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit)
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureWhite)
+                    .background(colors.secondaryColor)
                     .clickable(onClick = onNavigateBack),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "<",
-                    color = TextOnBlack,
+                    color = colors.onSecondaryColor,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -138,7 +157,7 @@ private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit)
 
             Text(
                 text = "Application",
-                color = TextOnBlack,
+                color = colors.onPrimaryColor,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -147,13 +166,13 @@ private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit)
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onOpenSulog),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "≡",
-                color = TextOnBlack,
+                color = colors.onPrimaryColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -165,10 +184,12 @@ private fun SuperUserHeader(onNavigateBack: () -> Unit, onOpenSulog: () -> Unit)
 private fun SuperUserAppItem(
     group: GroupedApps,
     profileType: ProfileType,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
+    val colors = kanntanColors()
     Card(
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(0.dp)
     ) {
@@ -192,13 +213,13 @@ private fun SuperUserAppItem(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = group.primary.label,
-                        color = TextOnWhite,
+                        color = colors.onSecondaryColor,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = group.primary.packageName,
-                        color = TextOnWhite.copy(alpha = 0.7f),
+                        color = colors.onSecondaryColor.copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )
                 }
@@ -206,13 +227,14 @@ private fun SuperUserAppItem(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(if (group.anyAllowSu) PureBlack else PureWhite)
-                        .clickable(onClick = onClick),
+                        .alpha(if (enabled) 1f else 0.35f)
+                        .background(if (group.anyAllowSu) colors.primaryColor else colors.secondaryColor)
+                        .clickable(enabled = enabled, onClick = onClick),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (group.anyAllowSu) "ON" else "OFF",
-                        color = if (group.anyAllowSu) TextOnBlack else TextOnWhite,
+                        color = if (group.anyAllowSu) colors.onPrimaryColor else colors.onSecondaryColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -230,12 +252,12 @@ private fun SuperUserAppItem(
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .background(if (group.shouldUmount) PureBlack else Color.Gray)
+                            .background(if (group.shouldUmount) colors.primaryColor else Color.Gray)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "卸载模块",
-                        color = TextOnWhite.copy(alpha = 0.7f),
+                        color = colors.onSecondaryColor.copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )
                 }
@@ -275,6 +297,7 @@ private fun SelectorButton(
     isLocked: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -283,7 +306,7 @@ private fun SelectorButton(
                 .background(
                     when {
                         isSelected && isLocked -> Color.Gray
-                        isSelected -> PureBlack
+                        isSelected -> colors.primaryColor
                         else -> Color.Gray
                     }
                 )
@@ -293,7 +316,7 @@ private fun SelectorButton(
             if (isSelected) {
                 Text(
                     text = "✓",
-                    color = PureWhite,
+                    color = colors.onPrimaryColor,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -302,7 +325,7 @@ private fun SelectorButton(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
-            color = TextOnWhite.copy(alpha = 0.7f),
+            color = colors.onSecondaryColor.copy(alpha = 0.7f),
             fontSize = 10.sp
         )
     }

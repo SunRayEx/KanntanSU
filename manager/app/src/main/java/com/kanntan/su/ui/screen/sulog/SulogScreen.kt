@@ -27,11 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import me.weishu.kernelsu.ui.screen.sulog.SulogActions
 import me.weishu.kernelsu.ui.screen.sulog.SulogScreenState
 import me.weishu.kernelsu.ui.util.SulogEntry
@@ -44,21 +40,22 @@ fun SulogScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colors = kanntanColors()
 
     LaunchedEffect(Unit) {
         viewModel.refreshLatest()
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ContentBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.secondaryColor)) {
         SulogHeader(onNavigateBack = onNavigateBack)
 
         if (uiState.isLoading && uiState.entries.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PureBlack, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = colors.primaryColor, strokeWidth = 3.dp)
             }
         } else if (uiState.entries.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No Logs", color = TextOnWhite, fontSize = 18.sp)
+                Text("No Logs", color = colors.onSecondaryColor, fontSize = 18.sp)
             }
         } else {
             LazyColumn(
@@ -77,50 +74,52 @@ fun SulogScreen(
 
 @Composable
 private fun SulogHeader(onNavigateBack: () -> Unit) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onNavigateBack),
             contentAlignment = Alignment.Center
         ) {
-            Text("<", color = TextOnBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("<", color = colors.onPrimaryColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Text("Logs", color = TextOnBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("Logs", color = colors.onPrimaryColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun SulogItem(entry: SulogEntry) {
+    val colors = kanntanColors()
     Card(
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 text = entry.timestampText ?: "",
-                color = TextOnWhite.copy(alpha = 0.5f),
+                color = colors.onSecondaryColor.copy(alpha = 0.5f),
                 fontSize = 10.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = entry.key,
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             entry.fields.forEach { (key, value) ->
                 Text(
                     text = "$key: $value",
-                    color = TextOnWhite.copy(alpha = 0.7f),
+                    color = colors.onSecondaryColor.copy(alpha = 0.7f),
                     fontSize = 12.sp
                 )
             }

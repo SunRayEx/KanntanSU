@@ -32,11 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.data.model.TemplateInfo
 import me.weishu.kernelsu.ui.viewmodel.TemplateViewModel
@@ -51,6 +47,7 @@ fun TemplateScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
+    val colors = kanntanColors()
 
     LaunchedEffect(Unit) {
         if (uiState.templates.isEmpty()) {
@@ -58,7 +55,7 @@ fun TemplateScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ContentBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.secondaryColor)) {
         TemplateHeader(
             onNavigateBack = onNavigateBack,
             onImport = onImport,
@@ -67,14 +64,14 @@ fun TemplateScreen(
 
         if (uiState.isRefreshing && uiState.templates.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PureBlack, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = colors.primaryColor, strokeWidth = 3.dp)
             }
         } else if (!uiState.isRefreshing && uiState.templates.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = if (uiState.offline) "Network Offline" else "No Templates",
-                        color = TextOnWhite,
+                        color = colors.onSecondaryColor,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -82,13 +79,13 @@ fun TemplateScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Box(
                             modifier = Modifier
-                                .background(PureBlack)
+                                .background(colors.primaryColor)
                                 .clickable(onClick = { scope.launch { viewModel.fetchTemplates() } })
                                 .padding(horizontal = 24.dp, vertical = 8.dp)
                         ) {
                             Text(
                                 text = "Retry",
-                                color = TextOnBlack,
+                                color = colors.onPrimaryColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -125,10 +122,11 @@ private fun TemplateHeader(
     onImport: () -> Unit,
     onExport: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -137,16 +135,16 @@ private fun TemplateHeader(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureWhite)
+                    .background(colors.secondaryColor)
                     .clickable(onClick = onNavigateBack),
                 contentAlignment = Alignment.Center
             ) {
-                Text("<", color = TextOnBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("<", color = colors.onPrimaryColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = "App Profile Templates",
-                color = TextOnBlack,
+                color = colors.onPrimaryColor,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -156,20 +154,20 @@ private fun TemplateHeader(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureWhite)
+                    .background(colors.secondaryColor)
                     .clickable(onClick = onImport),
                 contentAlignment = Alignment.Center
             ) {
-                Text("I", color = TextOnBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("I", color = colors.onPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureWhite)
+                    .background(colors.secondaryColor)
                     .clickable(onClick = onExport),
                 contentAlignment = Alignment.Center
             ) {
-                Text("E", color = TextOnBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("E", color = colors.onPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -182,8 +180,9 @@ private fun TemplateItem(
     template: TemplateInfo,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Card(
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(0.dp)
     ) {
@@ -194,7 +193,7 @@ private fun TemplateItem(
         ) {
             Text(
                 text = template.name.ifEmpty { template.id },
-                color = TextOnWhite,
+                color = colors.onSecondaryColor,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -203,7 +202,7 @@ private fun TemplateItem(
 
             Text(
                 text = template.id + if (template.author.isEmpty()) "" else " @${template.author}",
-                color = TextOnWhite.copy(alpha = 0.7f),
+                color = colors.onSecondaryColor.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
 
@@ -211,7 +210,7 @@ private fun TemplateItem(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = template.description,
-                    color = TextOnWhite.copy(alpha = 0.6f),
+                    color = colors.onSecondaryColor.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )
             }
@@ -233,14 +232,15 @@ private fun TemplateItem(
 
 @Composable
 private fun TagChip(label: String) {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier
-            .background(PureBlack, RoundedCornerShape(0.dp))
+            .background(colors.primaryColor, RoundedCornerShape(0.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
-            color = TextOnBlack,
+            color = colors.onPrimaryColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )

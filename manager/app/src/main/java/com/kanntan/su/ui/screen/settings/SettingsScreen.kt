@@ -18,21 +18,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanntan.su.ui.component.SegmentedSwitchItem
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import me.weishu.kernelsu.ui.screen.settings.SettingsUiState
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 
@@ -52,8 +51,10 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colors = kanntanColors()
+    val context = LocalContext.current
 
-    Column(modifier = Modifier.fillMaxSize().background(ContentBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.secondaryColor)) {
         SettingsHeader(onNavigateBack = onNavigateBack)
 
         Column(
@@ -164,7 +165,7 @@ fun SettingsScreen(
                     icon = "▤",
                     title = "发送日志",
                     summary = "将 KernelSU 日志文件保存在手机内或者分享给别人",
-                    onClick = { /* Context needed for sendLog */ }
+                    onClick = { actions.onSendLog(context) }
                 )
             }
         }
@@ -173,23 +174,24 @@ fun SettingsScreen(
 
 @Composable
 private fun SettingsHeader(onNavigateBack: () -> Unit) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onNavigateBack),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "<",
-                color = TextOnBlack,
+                color = colors.onSecondaryColor,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -197,7 +199,7 @@ private fun SettingsHeader(onNavigateBack: () -> Unit) {
         Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = "Setting",
-            color = TextOnBlack,
+            color = colors.onPrimaryColor,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -209,16 +211,17 @@ private fun SettingsSection(
     title: String,
     content: @Composable () -> Unit
 ) {
+    val colors = kanntanColors()
     Column {
         Text(
             text = title,
-            color = TextOnWhite.copy(alpha = 0.7f),
+            color = colors.onSecondaryColor.copy(alpha = 0.7f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
         Card(
-            colors = CardDefaults.cardColors(containerColor = PureWhite),
+            colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             shape = RoundedCornerShape(0.dp)
         ) {
@@ -235,6 +238,7 @@ private fun SettingsSwitchItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -250,12 +254,12 @@ private fun SettingsSwitchItem(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureBlack),
+                    .background(colors.primaryColor),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = icon,
-                    color = PureWhite,
+                    color = colors.onPrimaryColor,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -266,31 +270,28 @@ private fun SettingsSwitchItem(
             Column {
                 Text(
                     text = title,
-                    color = TextOnWhite,
+                    color = colors.onSecondaryColor,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = summary,
-                    color = TextOnWhite.copy(alpha = 0.7f),
+                    color = colors.onSecondaryColor.copy(alpha = 0.7f),
                     fontSize = 11.sp
                 )
             }
         }
 
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(if (checked) PureBlack else androidx.compose.ui.graphics.Color.Gray),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (checked) "ON" else "OFF",
-                color = PureWhite,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colors.onPrimaryColor,
+                checkedTrackColor = colors.primaryColor,
+                uncheckedThumbColor = colors.onSecondaryColor,
+                uncheckedTrackColor = colors.primaryColor.copy(alpha = 0.3f)
             )
-        }
+        )
     }
 }
 
@@ -301,6 +302,7 @@ private fun SettingsClickItem(
     summary: String,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -316,12 +318,12 @@ private fun SettingsClickItem(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(PureBlack),
+                    .background(colors.primaryColor),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = icon,
-                    color = PureWhite,
+                    color = colors.onPrimaryColor,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -332,13 +334,13 @@ private fun SettingsClickItem(
             Column {
                 Text(
                     text = title,
-                    color = TextOnWhite,
+                    color = colors.onSecondaryColor,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = summary,
-                    color = TextOnWhite.copy(alpha = 0.7f),
+                    color = colors.onSecondaryColor.copy(alpha = 0.7f),
                     fontSize = 11.sp
                 )
             }
@@ -346,7 +348,7 @@ private fun SettingsClickItem(
 
         Text(
             text = ">",
-            color = TextOnWhite.copy(alpha = 0.5f),
+            color = colors.onSecondaryColor.copy(alpha = 0.5f),
             fontSize = 14.sp
         )
     }

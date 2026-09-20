@@ -20,13 +20,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.kanntan.su.ui.screen.home.HomeScreen
 import com.kanntan.su.ui.screen.home.HomeActions
 import com.kanntan.su.ui.screen.home.HomeViewModel
@@ -57,11 +62,13 @@ import com.kanntan.su.ui.theme.KanntanThemeState
 import com.kanntan.su.ui.theme.LocalKanntanTheme
 import com.kanntan.su.ui.theme.KanntanSUTheme
 import com.kanntan.su.ui.util.reboot
+import me.weishu.kernelsu.ui.util.getBugreportFile
 import android.util.Log
 import android.content.Intent
 import android.widget.Toast
 import me.weishu.kernelsu.ui.screen.flash.FlashIt
 import me.weishu.kernelsu.ui.util.LkmSelection
+import me.weishu.kernelsu.ui.util.uninstallPermanently
 
 enum class Screen {
     HOME, MODULES, SUPERUSER, SETTINGS, SULOG, INSTALL, APP_PROFILE, COLOR_PALETTE,
@@ -109,6 +116,7 @@ private fun MainNavigation() {
     var selectedPackageName by remember { mutableStateOf<String?>(null) }
     var flashIt by remember { mutableStateOf<FlashIt?>(null) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val themeState = remember { KanntanThemeState(context) }
     val colors by themeState.colors.collectAsState()
     
@@ -251,11 +259,41 @@ private fun MainNavigation() {
                     actions = SettingsActions(
                         onReboot = { reboot() },
                         onRestoreBoot = { reboot("recovery") },
-                        onSendLog = { /* TODO */ },
+                        onSendLog = { ctx ->
+                            scope.launch {
+                                Toast.makeText(context, "正在收集日志…", Toast.LENGTH_SHORT).show()
+                                val file = withContext(Dispatchers.IO) {
+                                    runCatching { getBugreportFile(ctx) }.getOrNull()
+                                }
+                                if (file == null || !file.exists()) {
+                                    Toast.makeText(context, "日志生成失败（需要 Root 权限）", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+                                val uri = FileProvider.getUriForFile(
+                                    ctx, "${ctx.packageName}.fileprovider", file
+                                )
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/gzip"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(share, "发送日志"))
+                            }
+                        },
                         onOpenThemeCustomization = { currentScreen = Screen.COLOR_PALETTE },
                         onOpenAppProfileTemplate = { currentScreen = Screen.TEMPLATE },
                         onUninstallKernelSU = {
-                            Toast.makeText(context, "卸载 KernelSU 功能开发中", Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                val report = withContext(Dispatchers.IO) {
+                                    val out = StringBuilder()
+                                    val result = uninstallPermanently(
+                                        onStdout = { out.appendLine(it) },
+                                        onStderr = { out.appendLine(it) }
+                                    )
+                                    "卸载结果: $result\n$out"
+                                }
+                                Toast.makeText(context, report, Toast.LENGTH_LONG).show()
+                            }
                         }
                     ),
                     onNavigateBack = { currentScreen = Screen.HOME }

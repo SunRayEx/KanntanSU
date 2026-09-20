@@ -29,11 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanntan.su.ui.component.SegmentedSwitchItem
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.profile.Capabilities
 import me.weishu.kernelsu.profile.Groups
@@ -56,6 +52,7 @@ fun AppProfileScreen(
 ) {
     var profile by remember { mutableStateOf(Natives.getAppProfile(packageName, uid)) }
     var isLoading by remember { mutableStateOf(false) }
+    val colors = kanntanColors()
 
     val initialProfile = remember(packageName, uid) {
         Natives.getAppProfile(packageName, uid)
@@ -68,7 +65,7 @@ fun AppProfileScreen(
         else -> ProfileMode.CUSTOM
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ContentBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.secondaryColor)) {
         AppProfileHeader(packageName = packageName, onNavigateBack = onNavigateBack)
 
         Column(
@@ -106,7 +103,7 @@ fun AppProfileScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(40.dp)
-                                .background(if (isSelected) PureBlack else PureWhite)
+                                .background(if (isSelected) colors.primaryColor else colors.secondaryColor)
                                 .clickable {
                                     profile = when (mode) {
                                         ProfileMode.DEFAULT -> profile.copy(
@@ -131,7 +128,7 @@ fun AppProfileScreen(
                                     ProfileMode.TEMPLATE -> "模板"
                                     ProfileMode.CUSTOM -> "自定义"
                                 },
-                                color = if (isSelected) TextOnBlack else TextOnWhite,
+                                color = if (isSelected) colors.onPrimaryColor else colors.onSecondaryColor,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -157,10 +154,10 @@ fun AppProfileScreen(
                             Box(
                                 modifier = Modifier
                                     .size(20.dp)
-                                    .background(if (isChecked) PureBlack else PureWhite)
+                                    .background(if (isChecked) colors.primaryColor else colors.secondaryColor)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = ctx, color = TextOnWhite, fontSize = 14.sp)
+                            Text(text = ctx, color = colors.onSecondaryColor, fontSize = 14.sp)
                         }
                     }
                 }
@@ -208,18 +205,18 @@ fun AppProfileScreen(
 
             Row(modifier = Modifier.fillMaxWidth()) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                    colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp)
                         .clickable { profile = initialProfile }
                 ) {
                     Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
-                        Text("Reset", color = TextOnWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("Reset", color = colors.onSecondaryColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = PureBlack),
+                    colors = CardDefaults.cardColors(containerColor = colors.primaryColor),
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 8.dp)
@@ -232,9 +229,9 @@ fun AppProfileScreen(
                 ) {
                     Box(modifier = Modifier.padding(16.dp), contentAlignment = Alignment.Center) {
                         if (isLoading) {
-                            CircularProgressIndicator(color = TextOnBlack, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                            CircularProgressIndicator(color = colors.onPrimaryColor, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                         } else {
-                            Text("Save", color = TextOnBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Save", color = colors.onPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -245,42 +242,44 @@ fun AppProfileScreen(
 
 @Composable
 private fun AppProfileHeader(packageName: String, onNavigateBack: () -> Unit) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(PureWhite)
+                .background(colors.secondaryColor)
                 .clickable(onClick = onNavigateBack),
             contentAlignment = Alignment.Center
         ) {
-            Text("<", color = TextOnBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("<", color = colors.onPrimaryColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text("App Profile", color = TextOnBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(packageName, color = TextOnBlack.copy(alpha = 0.7f), fontSize = 12.sp)
+            Text("App Profile", color = colors.onPrimaryColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(packageName, color = colors.onPrimaryColor.copy(alpha = 0.7f), fontSize = 12.sp)
         }
     }
 }
 
 @Composable
 private fun AppProfileSection(title: String, content: @Composable () -> Unit) {
+    val colors = kanntanColors()
     Column {
         Text(
             text = title,
-            color = TextOnWhite.copy(alpha = 0.7f),
+            color = colors.onSecondaryColor.copy(alpha = 0.7f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
         Card(
-            colors = CardDefaults.cardColors(containerColor = PureWhite),
+            colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(8.dp)) { content() }

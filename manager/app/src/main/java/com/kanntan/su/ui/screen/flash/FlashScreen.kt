@@ -39,10 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 import com.kanntan.su.ui.util.reboot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -145,10 +142,11 @@ private fun FlashHeader(
     onBack: () -> Unit,
     onSaveLog: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PureBlack)
+            .background(colors.primaryColor)
             .padding(top = 40.dp, bottom = 12.dp, start = 4.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -156,7 +154,7 @@ private fun FlashHeader(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = TextOnBlack,
+                tint = colors.onPrimaryColor,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -169,7 +167,7 @@ private fun FlashHeader(
                 FlashingStatus.SUCCESS -> "Flash Success"
                 FlashingStatus.FAILED -> "Flash Failed"
             },
-            color = TextOnBlack,
+            color = colors.onPrimaryColor,
             fontSize = 20.sp,
             modifier = Modifier.weight(1f)
         )
@@ -178,7 +176,7 @@ private fun FlashHeader(
             Icon(
                 imageVector = Icons.Filled.Save,
                 contentDescription = "Save Log",
-                tint = TextOnBlack,
+                tint = colors.onPrimaryColor,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -193,11 +191,12 @@ private fun FlashContent(
     onReboot: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val colors = kanntanColors()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ContentBackground)
+            .background(colors.secondaryColor)
     ) {
         Box(
             modifier = Modifier
@@ -210,12 +209,12 @@ private fun FlashContent(
                     modifier = Modifier
                         .size(48.dp)
                         .align(Alignment.Center),
-                    color = PureBlack
+                    color = colors.primaryColor
                 )
             } else {
                 Text(
                     text = text,
-                    color = TextOnWhite,
+                    color = colors.onSecondaryColor,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
@@ -243,7 +242,7 @@ private fun FlashContent(
                             color = when (flashingStatus) {
                                 FlashingStatus.SUCCESS -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
                                 FlashingStatus.FAILED -> androidx.compose.ui.graphics.Color(0xFFF44336)
-                                else -> PureBlack
+                                else -> colors.primaryColor
                             },
                             shape = androidx.compose.foundation.shape.CircleShape
                         )
@@ -257,7 +256,7 @@ private fun FlashContent(
                         FlashingStatus.FAILED -> "Failed"
                         else -> ""
                     },
-                    color = TextOnWhite,
+                    color = colors.onSecondaryColor,
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f)
                 )
@@ -267,13 +266,13 @@ private fun FlashContent(
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = "Reboot",
-                            tint = PureBlack,
+                            tint = colors.primaryColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                     Text(
                         text = "Reboot",
-                        color = PureBlack,
+                        color = colors.primaryColor,
                         fontSize = 14.sp
                     )
                 }
