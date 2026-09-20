@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,7 +28,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,6 +74,7 @@ fun InstallScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isFlashing by rememberSaveable { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var partitionSelectionIndex by rememberSaveable { mutableIntStateOf(0) }
     var hasCustomSelected by rememberSaveable { mutableStateOf(false) }
@@ -246,7 +251,7 @@ fun InstallScreen(
                                         Toast.makeText(context, "刷入成功", Toast.LENGTH_SHORT).show()
                                         onNavigateBack()
                                     } else {
-                                        Toast.makeText(context, "刷入失败: ${result.error}", Toast.LENGTH_LONG).show()
+                                        errorMessage = result.error.ifBlank { "未知错误（ksud 无输出）" }
                                     }
                                 }
                             }
@@ -263,6 +268,46 @@ fun InstallScreen(
             }
         }
     }
+
+    errorMessage?.let { message ->
+        KanntanErrorDialog(
+            message = message,
+            onDismiss = { errorMessage = null }
+        )
+    }
+}
+
+@Composable
+private fun KanntanErrorDialog(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    val colors = kanntanColors()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("确定", color = colors.primaryColor)
+            }
+        },
+        title = { Text("刷入失败", color = colors.onSecondaryColor) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = message,
+                    color = colors.onSecondaryColor,
+                    fontSize = 13.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+        },
+        containerColor = colors.secondaryColor
+    )
 }
 
 @Composable

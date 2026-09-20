@@ -42,6 +42,8 @@ fun installBoot(
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
 ): FlashResult {
+    val stdout = StringBuilder()
+    val stderr = StringBuilder()
     val result = upstreamInstallBoot(
         bootUri = bootUri,
         lkm = lkm,
@@ -50,14 +52,18 @@ fun installBoot(
         allowShell = allowShell,
         enableAdb = enableAdb,
         forceBackup = forceBackup,
-        onStdout = onStdout,
-        onStderr = onStderr,
+        onStdout = { line -> stdout.appendLine(line); onStdout(line) },
+        onStderr = { line -> stderr.appendLine(line); onStderr(line) },
     )
     return FlashResult(
         isSuccess = result.code == 0,
         showReboot = result.showReboot,
-        output = "",
-        error = result.err
+        output = stdout.toString().trim(),
+        error = buildString {
+            val err = stderr.toString().trim()
+            if (err.isNotEmpty()) appendLine(err)
+            append(stdout.toString().trim())
+        }.trim()
     )
 }
 
