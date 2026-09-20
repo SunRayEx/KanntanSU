@@ -60,11 +60,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.kanntan.su.ui.theme.ContentBackground
-import com.kanntan.su.ui.theme.PureBlack
-import com.kanntan.su.ui.theme.PureWhite
-import com.kanntan.su.ui.theme.TextOnBlack
-import com.kanntan.su.ui.theme.TextOnWhite
+import com.kanntan.su.ui.theme.kanntanColors
 
 // 固定尺寸常量，确保不同区域使用一致的块尺寸以便精确对齐
 private val SMALL_BLOCK_DP = 48.dp
@@ -90,13 +86,14 @@ fun HomeScreen(
     wallpaperBitmap: android.graphics.Bitmap? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colors = kanntanColors()
     
     LaunchedEffect(Unit) { viewModel.refresh() }
     
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ContentBackground)
+            .background(colors.middleColor)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header Area
@@ -156,11 +153,12 @@ private fun HeaderArea(
     ksuStatusMessage: String,
     onHeaderClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(HEADER_HEIGHT_DP)
-            .background(PureBlack)
+            .background(colors.topColor)
     ) {
         // 白块 - 在底层(left=0, top约40%高度)
         // 使用常量尺寸确保与 Footer 的小黑块一致，从而能在不同区域实现精确对齐
@@ -177,7 +175,7 @@ private fun HeaderArea(
 
             // 绘制大白色方块（在文字下方）
             drawRect(
-                color = PureWhite,
+                color = colors.onTopColor,
                 topLeft = Offset(whiteSquareLeft, whiteSquareTop),
                 size = Size(whiteSquareSize, whiteSquareSize)
             )
@@ -190,7 +188,7 @@ private fun HeaderArea(
             val joinLeft = whiteSquareLeft + whiteSquareSize
             val joinTop = whiteSquareTop + whiteSquareSize
             drawRect(
-                color = PureWhite,
+                color = colors.onTopColor,
                 topLeft = Offset(joinLeft, joinTop),
                 size = Size(innerCrossSize, innerCrossSize)
             )
@@ -209,7 +207,7 @@ private fun HeaderArea(
                 // 第一行：KernelSU - 48sp ExtraBold, line-height 1.0
                 Text(
                     text = "KernelSU",
-                    color = TextOnBlack,
+                    color = colors.onTopColor,
                     fontSize = 42.sp,
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 44.sp
@@ -218,7 +216,7 @@ private fun HeaderArea(
                 // 第二行：is - 24sp Normal, 紧凑
                 Text(
                     text = "is",
-                    color = TextOnBlack,
+                    color = colors.onTopColor,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
                     lineHeight = 20.sp,
@@ -228,7 +226,7 @@ private fun HeaderArea(
                 // 第三行：状态文字 - 根据SELinux状态显示不同内容
                 Text(
                     text = ksuStatusMessage,
-                    color = TextOnBlack,
+                    color = colors.onTopColor,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 28.sp,
@@ -245,42 +243,17 @@ private fun HeaderArea(
 
 @Composable
 private fun HeaderGradientStrip() {
-    // 硬派渐变：用24条极细横线模拟更连贯的扫描线效果
+    val colors = kanntanColors()
+    // 硬派渐变：用24条极细横线模拟更连贯的扫描线效果，从顶部色过渡到内容色
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
     ) {
-        // 24条从黑到灰到白的渐变横条，每条2dp
-        val strips = listOf(
-            Color(0xFF000000),
-            Color(0xFF080808),
-            Color(0xFF101010),
-            Color(0xFF181818),
-            Color(0xFF202020),
-            Color(0xFF282828),
-            Color(0xFF303030),
-            Color(0xFF383838),
-            Color(0xFF404040),
-            Color(0xFF484848),
-            Color(0xFF505050),
-            Color(0xFF585858),
-            Color(0xFF606060),
-            Color(0xFF686868),
-            Color(0xFF707070),
-            Color(0xFF787878),
-            Color(0xFF808080),
-            Color(0xFF888888),
-            Color(0xFF909090),
-            Color(0xFF989898),
-            Color(0xFFA0A0A0),
-            Color(0xFFB0B0B0),
-            Color(0xFFC8C8C8),
-            Color(0xFFE0E0E0),
-            Color(0xFFF0F0F0)
-        )
-
-        strips.forEach { c ->
+        val stripCount = 24
+        repeat(stripCount) { i ->
+            val fraction = i / (stripCount - 1).toFloat()
+            val c = androidx.compose.ui.graphics.lerp(colors.topColor, colors.middleColor, fraction)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -300,10 +273,11 @@ private fun ContentArea(
     systemInfo: SystemInfo,
     modifier: Modifier = Modifier
 ) {
+    val colors = kanntanColors()
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(PureWhite)
+            .background(colors.middleColor)
             .verticalScroll(rememberScrollState())
             .padding(end = 24.dp, top = 32.dp, bottom = 80.dp),
         horizontalAlignment = Alignment.End
@@ -343,13 +317,14 @@ private fun InfoRowRightAligned(
     value: String,
     isMultiLine: Boolean = false
 ) {
+    val colors = kanntanColors()
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.End
     ) {
         Text(
             text = label,
-            color = TextOnWhite,
+            color = colors.onMiddleColor,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.End
@@ -359,7 +334,7 @@ private fun InfoRowRightAligned(
         
         Text(
             text = value,
-            color = TextOnWhite,
+            color = colors.onMiddleColor,
             fontSize = 12.sp,
             fontWeight = FontWeight.Normal,
             maxLines = if (isMultiLine) Int.MAX_VALUE else 1,
@@ -377,6 +352,7 @@ private fun FooterArea(
     visible: Boolean,
     onMenuToggle: () -> Unit
 ) {
+    val colors = kanntanColors()
     val density = LocalDensity.current
     
     // 小黑块状态：初始位置 (0, 0)
@@ -438,7 +414,7 @@ private fun FooterArea(
             
             // 大黑块 - 紧贴右下角
             drawRect(
-                color = PureBlack,
+                color = colors.bottomColor,
                 topLeft = Offset(canvasWidth - bigSize, canvasHeight - bigSize),
                 size = Size(bigSize, bigSize)
             )
@@ -449,7 +425,7 @@ private fun FooterArea(
             
             // 先绘制小黑块为黑色
             drawRect(
-                color = PureBlack,
+                color = colors.bottomColor,
                 topLeft = Offset(smallLeft, smallTop),
                 size = Size(smallSizePx, smallSizePx)
             )
@@ -463,7 +439,7 @@ private fun FooterArea(
             // 如果有重叠，在重叠区域绘制白色
             if (overlapLeft < overlapRight && overlapTop < overlapBottom) {
                 drawRect(
-                    color = PureWhite,
+                    color = colors.onBottomColor,
                     topLeft = Offset(overlapLeft, overlapTop),
                     size = Size(overlapRight - overlapLeft, overlapBottom - overlapTop)
                 )
@@ -484,6 +460,7 @@ private fun FloatingMenu(
     onApplicationClick: () -> Unit,
     onSettingClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -502,7 +479,7 @@ private fun FloatingMenu(
                 ) {
                     // Modules Card
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ContentBackground),
+                        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
                         shape = RoundedCornerShape(0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -516,10 +493,10 @@ private fun FloatingMenu(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Canvas(modifier = Modifier.size(24.dp)) {
-                                drawRect(color = PureBlack, topLeft = Offset.Zero, size = Size(size.width, size.height))
+                                drawRect(color = colors.primaryColor, topLeft = Offset.Zero, size = Size(size.width, size.height))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(text = "Modules", color = TextOnWhite, fontSize = 14.sp)
+                            Text(text = "Modules", color = colors.onSecondaryColor, fontSize = 14.sp)
                         }
                     }
                     
@@ -527,7 +504,7 @@ private fun FloatingMenu(
                     
                     // Application Card
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ContentBackground),
+                        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
                         shape = RoundedCornerShape(0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -544,10 +521,10 @@ private fun FloatingMenu(
                                     lineTo(0f, size.height)
                                     close()
                                 }
-                                drawPath(path = path, color = PureBlack)
+                                drawPath(path = path, color = colors.primaryColor)
                             }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(text = "Application", color = TextOnWhite, fontSize = 14.sp)
+                            Text(text = "Application", color = colors.onSecondaryColor, fontSize = 14.sp)
                         }
                     }
                     
@@ -555,7 +532,7 @@ private fun FloatingMenu(
                     
                     // Setting Card
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ContentBackground),
+                        colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
                         shape = RoundedCornerShape(0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -566,10 +543,10 @@ private fun FloatingMenu(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Canvas(modifier = Modifier.size(24.dp)) {
-                                drawCircle(color = PureBlack, radius = size.minDimension / 2)
+                                drawCircle(color = colors.primaryColor, radius = size.minDimension / 2)
                             }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(text = "Setting", color = TextOnWhite, fontSize = 14.sp)
+                            Text(text = "Setting", color = colors.onSecondaryColor, fontSize = 14.sp)
                         }
                     }
                 }
@@ -586,6 +563,7 @@ private fun MenuItemRow(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = kanntanColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -595,7 +573,7 @@ private fun MenuItemRow(
     ) {
         Canvas(modifier = Modifier.size(20.dp)) {
             drawRect(
-                color = PureBlack,
+                color = colors.primaryColor,
                 topLeft = Offset.Zero,
                 size = Size(size.width, size.height)
             )
@@ -605,7 +583,7 @@ private fun MenuItemRow(
         
         Text(
             text = label,
-            color = TextOnWhite,
+            color = colors.onSecondaryColor,
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )

@@ -8,7 +8,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,7 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kanntan.su.ui.screen.home.HomeScreen
 import com.kanntan.su.ui.screen.home.HomeActions
@@ -44,6 +53,8 @@ import com.kanntan.su.ui.screen.install.InstallActions
 import com.kanntan.su.ui.screen.appprofile.AppProfileScreen
 import com.kanntan.su.ui.screen.appprofile.AppProfileActions
 import com.kanntan.su.ui.screen.colorpalette.ColorPaletteScreen
+import com.kanntan.su.ui.theme.KanntanThemeState
+import com.kanntan.su.ui.theme.LocalKanntanTheme
 import com.kanntan.su.ui.theme.KanntanSUTheme
 import com.kanntan.su.ui.util.reboot
 import android.util.Log
@@ -98,6 +109,8 @@ private fun MainNavigation() {
     var selectedPackageName by remember { mutableStateOf<String?>(null) }
     var flashIt by remember { mutableStateOf<FlashIt?>(null) }
     val context = LocalContext.current
+    val themeState = remember { KanntanThemeState(context) }
+    val colors by themeState.colors.collectAsState()
     
     val homeViewModel: HomeViewModel = viewModel()
     val moduleViewModel: ModuleViewModel = viewModel()
@@ -108,8 +121,31 @@ private fun MainNavigation() {
     val sulogViewModel: SulogViewModel = viewModel()
     val installViewModel: InstallViewModel = viewModel()
     
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        when (currentScreen) {
+    CompositionLocalProvider(LocalKanntanTheme provides themeState) {
+        Box(modifier = Modifier.fillMaxSize().background(colors.middleColor)) {
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    if (targetState == Screen.HOME) {
+                        // returning to root: plain fade, root has no elevation
+                        fadeIn(animationSpec = tween(250)) togetherWith
+                            fadeOut(animationSpec = tween(250))
+                    } else {
+                        // pushed page rises in slightly: gives a sense of layer/depth
+                        slideInVertically(animationSpec = tween(300)) { fullHeight -> fullHeight / 10 } +
+                            fadeIn(animationSpec = tween(300)) togetherWith
+                            fadeOut(animationSpec = tween(200))
+                    }
+                },
+                label = "kanntan-screen"
+            ) { screen ->
+                val isRoot = screen == Screen.HOME
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (isRoot) Modifier else Modifier.shadow(elevation = 8.dp))
+                ) {
+                    when (screen) {
             Screen.HOME -> {
                 HomeScreen(
                     viewModel = homeViewModel,
@@ -273,6 +309,9 @@ private fun MainNavigation() {
                 ColorPaletteScreen(
                     onNavigateBack = { currentScreen = Screen.SETTINGS }
                 )
+            }
+        }
+                }
             }
         }
     }
