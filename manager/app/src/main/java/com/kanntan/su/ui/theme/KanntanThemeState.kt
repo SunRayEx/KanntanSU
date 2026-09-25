@@ -79,11 +79,11 @@ val DefaultKanntanColors = KanntanColors(
  * Both hold an absolute path into app-private storage, or `null` to fall back
  * to the matching [KanntanColors] slot:
  * - [backgroundImagePath] replaces the home content background ([KanntanColors.middleColor])
- * - [statusImagePath] replaces the 96dp block in the home header (the KernelSU status button)
+ * - [topImagePath] replaces the whole top section of the home page ([KanntanColors.topColor])
  */
 data class KanntanImages(
     val backgroundImagePath: String? = null,
-    val statusImagePath: String? = null,
+    val topImagePath: String? = null,
 )
 
 /** Pick a dark-ish or white-ish foreground for a background, keeping the high-contrast feel. */
@@ -117,7 +117,7 @@ class KanntanThemeState(context: Context) {
 
     private fun loadImages(): KanntanImages = KanntanImages(
         backgroundImagePath = prefs.getString(KEY_BG_IMAGE, null),
-        statusImagePath = prefs.getString(KEY_STATUS_IMAGE, null),
+        topImagePath = prefs.getString(KEY_TOP_IMAGE, null),
     )
 
     fun setTopColor(color: Color) = update(KEY_TOP, color) { it.copy(topColor = color) }
@@ -130,8 +130,8 @@ class KanntanThemeState(context: Context) {
         it.copy(backgroundImagePath = path)
     }
 
-    fun setStatusImage(path: String?) = updateImage(KEY_STATUS_IMAGE, path) {
-        it.copy(statusImagePath = path)
+    fun setTopImage(path: String?) = updateImage(KEY_TOP_IMAGE, path) {
+        it.copy(topImagePath = path)
     }
 
     private fun update(key: String, color: Color, block: (KanntanColors) -> KanntanColors) {
@@ -161,7 +161,7 @@ class KanntanThemeState(context: Context) {
         private const val KEY_PRIMARY = "primary_color"
         private const val KEY_SECONDARY = "secondary_color"
         private const val KEY_BG_IMAGE = "background_image"
-        private const val KEY_STATUS_IMAGE = "status_image"
+        private const val KEY_TOP_IMAGE = "top_image"
 
         private fun SharedPreferences.color(key: String, default: Color): Color {
             val value = getInt(key, DEFAULT_SENTINEL)
@@ -203,6 +203,56 @@ fun rememberThemeImage(path: String?): ImageBitmap? {
         }
     }
     return bitmap
+}
+
+/**
+ * Foreground color that stays readable over an optional theme image.
+ *
+ * A fixed theme color would vanish against an arbitrary photo, so when [path] is set the
+ * text follows the image: [imageLuminance] already folds in how much of the picture is
+ * white/bright, so a light photo yields near-black text and a dark one yields white.
+ * Without an image this is just [fallback].
+ */
+@Composable
+fun rememberImageAwareForeground(path: String?, fallback: Color): Color {
+    val context = LocalContext.current
+    var color by remember(path) { mutableStateOf(fallback) }
+    LaunchedEffect(path) {
+        color = if (path == null) {
+            fallback
+        } else {
+            val luminance = withContext(Dispatchers.IO) { imageLuminance(context, path) }
+            if (luminance > LUMINANCE_TEXT_THRESHOLD) Color(0xFF1A1A1A) else Color(0xFFFFFFFF)
+        }
+    }
+    return color
+}
+
+/**
+ * Average luminance (0..1) of a stored theme image, sampled from a tiny 32x32 thumbnail
+ * so it is cheap enough for a background thread. White pixels push the average up, so
+ * this doubles as a "how much of the image is light" measure.
+ */
+fun imageLuminance(context: Context, path: String): Float {
+    return runCatching {
+        val source = decodeSampledBitmap(context, path) ?: return 0f
+        val small = Bitmap.createScaledBitmap(source, 32, 32, true)
+        if (small !== source) source.recycle()
+
+        var sum = 0.0
+        for (y in 0 until small.height) {
+            for (x in 0 until small.width) {
+                val px = small.getPixel(x, y)
+                val r = ((px shr 16) and 0xFF) / 255.0
+                val g = ((px shr 8) and 0xFF) / 255.0
+                val b = (px and 0xFF) / 255.0
+                sum += 0.299 * r + 0.587 * g + 0.114 * b
+            }
+        }
+        val pixels = small.width * small.height
+        small.recycle()
+        (sum / pixels).toFloat()
+    }.getOrDefault(0f)
 }
 
 /**
@@ -271,3 +321,9 @@ fun kanntanSwitchColors(colors: KanntanColors = kanntanColors()): SwitchColors =
 
 /** Neutral gray that stays visible on both the light and the dark theme colors. */
 private val NeutralSwitchTrack = Color(0xFF9E9E9E)
+
+/**
+ * Images whose average luminance is above this are treated as "bright" (mostly light
+ * pixels), so text drawn over them should be dark rather than white.
+ */
+private const val LUMINANCE_TEXT_THRESHOLD = 0.55f

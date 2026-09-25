@@ -57,6 +57,7 @@ import com.kanntan.su.ui.theme.LocalKanntanTheme
 import com.kanntan.su.ui.theme.decodeSampledBitmap
 import com.kanntan.su.ui.theme.kanntanColors
 import com.kanntan.su.ui.theme.kanntanImages
+import com.kanntan.su.ui.theme.rememberImageAwareForeground
 import com.kanntan.su.ui.theme.rememberThemeImage
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -87,12 +88,12 @@ fun ColorPaletteScreen(
                 ?.let(theme::setBackgroundImage)
         }
     }
-    val statusLauncher = rememberLauncherForActivityResult(
+    val topImageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            copyImageToPrivateStorage(context, uri, "status")
-                ?.let(theme::setStatusImage)
+            copyImageToPrivateStorage(context, uri, "top")
+                ?.let(theme::setTopImage)
         }
     }
 
@@ -111,23 +112,49 @@ fun ColorPaletteScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // 主页上半部分（大按钮区域）— 预设色板 / 自定义图片两个抽屉
-            DrawerColorSection(
-                title = "主页上半部分",
-                selectedColor = colors.topColor,
-                onColorSelected = { theme.setTopColor(it) },
-                onClear = { theme.setTopColor(DefaultKanntanColors.topColor) }
+            // —— 主页顶部 —— 顶部图片生效后覆盖整个区域，与“主页上半部分”颜色抽屉互斥
+            ImageSection(
+                title = "主页顶部图片",
+                description = "生效后覆盖主页顶部区域，文字会按图片明度自动变深或变浅",
+                imagePath = images.topImagePath,
+                onPick = { topImageLauncher.launch("image/*") },
+                onClear = { theme.setTopImage(null) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 主页中间内容部分
-            DrawerColorSection(
-                title = "主页中间内容部分",
-                selectedColor = colors.middleColor,
-                onColorSelected = { theme.setMiddleColor(it) },
-                onClear = { theme.setMiddleColor(DefaultKanntanColors.middleColor) }
+            if (images.topImagePath == null) {
+                // 主页上半部分（大按钮区域）— 预设色板 / 自定义图片两个抽屉
+                DrawerColorSection(
+                    title = "主页上半部分",
+                    selectedColor = colors.topColor,
+                    onColorSelected = { theme.setTopColor(it) },
+                    onClear = { theme.setTopColor(DefaultKanntanColors.topColor) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // —— 主页内容背景 —— 背景图片生效后取代中间区域的纯色背景
+            ImageSection(
+                title = "主页背景图片",
+                description = "生效后覆盖主页中间内容区域，与该分区颜色互斥",
+                imagePath = images.backgroundImagePath,
+                onPick = { backgroundLauncher.launch("image/*") },
+                onClear = { theme.setBackgroundImage(null) }
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (images.backgroundImagePath == null) {
+                // 主页中间内容部分
+                DrawerColorSection(
+                    title = "主页中间内容部分",
+                    selectedColor = colors.middleColor,
+                    onColorSelected = { theme.setMiddleColor(it) },
+                    onClear = { theme.setMiddleColor(DefaultKanntanColors.middleColor) }
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -157,28 +184,6 @@ fun ColorPaletteScreen(
                 colors = themeColorOptions,
                 selectedColor = colors.secondaryColor,
                 onColorSelected = { theme.setSecondaryColor(it) }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 自定义背景图片（替换主页中间内容底色）
-            ImageSection(
-                title = "主页背景图片",
-                description = "替换主页中间内容区域的底色",
-                imagePath = images.backgroundImagePath,
-                onPick = { backgroundLauncher.launch("image/*") },
-                onClear = { theme.setBackgroundImage(null) }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // KernelSU 状态按钮图片（替换主页顶部 96dp 方块）
-            ImageSection(
-                title = "KernelSU 状态按钮图片",
-                description = "替换主页顶部状态区的方块图案",
-                imagePath = images.statusImagePath,
-                onPick = { statusLauncher.launch("image/*") },
-                onClear = { theme.setStatusImage(null) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -240,6 +245,12 @@ private fun ColorPaletteHeader(onNavigateBack: () -> Unit) {
 
 @Composable
 private fun PreviewCard(colors: com.kanntan.su.ui.theme.KanntanColors) {
+    val images = kanntanImages()
+    val topImage = rememberThemeImage(images.topImagePath)
+    val backgroundImage = rememberThemeImage(images.backgroundImagePath)
+    // Mirror the home page: text over a photo follows the image's luminance.
+    val topTextColor = rememberImageAwareForeground(images.topImagePath, colors.onTopColor)
+    val middleTextColor = rememberImageAwareForeground(images.backgroundImagePath, colors.onMiddleColor)
     Card(
         colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -250,12 +261,20 @@ private fun PreviewCard(colors: com.kanntan.su.ui.theme.KanntanColors) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
-                    .background(colors.topColor),
+                    .background(if (topImage == null) colors.topColor else Color.Transparent),
                 contentAlignment = Alignment.Center
             ) {
+                if (topImage != null) {
+                    Image(
+                        bitmap = topImage,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Text(
                     text = "KanntanSU",
-                    color = colors.onTopColor,
+                    color = topTextColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -268,12 +287,20 @@ private fun PreviewCard(colors: com.kanntan.su.ui.theme.KanntanColors) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(colors.middleColor),
+                    .background(if (backgroundImage == null) colors.middleColor else Color.Transparent),
                 contentAlignment = Alignment.Center
             ) {
+                if (backgroundImage != null) {
+                    Image(
+                        bitmap = backgroundImage,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Text(
                     text = "中间内容部分",
-                    color = colors.onMiddleColor,
+                    color = middleTextColor,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )

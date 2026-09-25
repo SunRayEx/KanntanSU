@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kanntan.su.ui.theme.kanntanColors
 import com.kanntan.su.ui.theme.kanntanImages
+import com.kanntan.su.ui.theme.rememberImageAwareForeground
 import com.kanntan.su.ui.theme.rememberThemeImage
 
 // 固定尺寸常量，确保不同区域使用一致的块尺寸以便精确对齐
@@ -170,22 +171,23 @@ private fun HeaderArea(
     onHeaderClick: () -> Unit
 ) {
     val colors = kanntanColors()
-    // Optional custom image for the KernelSU status block; when present it takes
-    // the place of the signature white square.
-    val statusImage = rememberThemeImage(kanntanImages().statusImagePath)
+    val images = kanntanImages()
+    // The top image replaces the *whole* top section, not just the status square, so an
+    // arbitrary photo needs a foreground that follows its brightness rather than the
+    // fixed onTopColor (which only ever worked against the stock black header).
+    val topImage = rememberThemeImage(images.topImagePath)
+    val textColor = rememberImageAwareForeground(images.topImagePath, colors.onTopColor)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(HEADER_HEIGHT_DP)
-            .background(colors.topColor)
+            .background(if (topImage == null) colors.topColor else Color.Transparent)
     ) {
-        if (statusImage != null) {
+        if (topImage != null) {
             Image(
-                bitmap = statusImage,
+                bitmap = topImage,
                 contentDescription = null,
-                modifier = Modifier
-                    .offset(x = 0.dp, y = HEADER_HEIGHT_DP * 0.18f)
-                    .size(WHITE_SQUARE_SIZE_DP),
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -238,7 +240,7 @@ private fun HeaderArea(
                 // 第一行：KernelSU - 48sp ExtraBold, line-height 1.0
                 Text(
                     text = "KernelSU",
-                    color = colors.onTopColor,
+                    color = textColor,
                     fontSize = 42.sp,
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 44.sp
@@ -247,7 +249,7 @@ private fun HeaderArea(
                 // 第二行：is - 24sp Normal, 紧凑
                 Text(
                     text = "is",
-                    color = colors.onTopColor,
+                    color = textColor,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
                     lineHeight = 20.sp,
@@ -257,7 +259,7 @@ private fun HeaderArea(
                 // 第三行：状态文字 - 根据SELinux状态显示不同内容
                 Text(
                     text = ksuStatusMessage,
-                    color = colors.onTopColor,
+                    color = textColor,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 28.sp,
@@ -275,6 +277,13 @@ private fun HeaderArea(
 @Composable
 private fun HeaderGradientStrip() {
     val colors = kanntanColors()
+    // A custom top image blends straight into the page background, so the
+    // hard step-gradient (which only ever bridged two solid theme colors) is
+    // suppressed there.
+    if (kanntanImages().topImagePath != null) {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp))
+        return
+    }
     // 硬派渐变：用24条极细横线模拟更连贯的扫描线效果，从顶部色过渡到内容色
     Column(
         modifier = Modifier
@@ -305,24 +314,31 @@ private fun ContentArea(
     modifier: Modifier = Modifier
 ) {
     val colors = kanntanColors()
+    val images = kanntanImages()
+    // The background image is drawn full-screen behind the whole page; filling this
+    // column with the solid middle color would hide it entirely. Text adapts to the
+    // image's luminance instead of relying on a fixed onMiddleColor.
+    val textColor = rememberImageAwareForeground(images.backgroundImagePath, colors.onMiddleColor)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.middleColor)
+            .then(if (images.backgroundImagePath == null) Modifier.background(colors.middleColor) else Modifier)
             .verticalScroll(rememberScrollState())
             .padding(end = 24.dp, top = 32.dp, bottom = 80.dp),
         horizontalAlignment = Alignment.End
     ) {
         InfoRowRightAligned(
             label = "内核版本",
-            value = systemInfo.kernelVersion
+            value = systemInfo.kernelVersion,
+            textColor = textColor
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         InfoRowRightAligned(
             label = "管理器版本",
-            value = systemInfo.managerVersion
+            value = systemInfo.managerVersion,
+            textColor = textColor
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -330,14 +346,16 @@ private fun ContentArea(
         InfoRowRightAligned(
             label = "系统指纹",
             value = systemInfo.fingerprint,
-            isMultiLine = true
+            isMultiLine = true,
+            textColor = textColor
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         InfoRowRightAligned(
             label = "SELinux状态",
-            value = systemInfo.selinuxStatus
+            value = systemInfo.selinuxStatus,
+            textColor = textColor
         )
     }
 }
@@ -346,16 +364,16 @@ private fun ContentArea(
 private fun InfoRowRightAligned(
     label: String,
     value: String,
-    isMultiLine: Boolean = false
+    isMultiLine: Boolean = false,
+    textColor: Color = kanntanColors().onMiddleColor
 ) {
-    val colors = kanntanColors()
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.End
     ) {
         Text(
             text = label,
-            color = colors.onMiddleColor,
+            color = textColor,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.End
@@ -365,7 +383,7 @@ private fun InfoRowRightAligned(
         
         Text(
             text = value,
-            color = colors.onMiddleColor,
+            color = textColor,
             fontSize = 12.sp,
             fontWeight = FontWeight.Normal,
             maxLines = if (isMultiLine) Int.MAX_VALUE else 1,
