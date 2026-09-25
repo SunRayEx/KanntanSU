@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Switch
-import androidx.compose.material.SwitchDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kanntan.su.ui.component.dialog.UninstallDialog
 import com.kanntan.su.ui.theme.kanntanColors
+import com.kanntan.su.ui.theme.kanntanSwitchColors
 import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.ui.screen.module.ModuleActions
 import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
@@ -328,12 +328,7 @@ private fun ModuleListItem(
                 Switch(
                     checked = module.enabled,
                     onCheckedChange = { onClick() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colors.onPrimaryColor,
-                        checkedTrackColor = colors.primaryColor,
-                        uncheckedThumbColor = colors.primaryColor,
-                        uncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.4f)
-                    )
+                    colors = kanntanSwitchColors()
                 )
             }
 

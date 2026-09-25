@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Switch
-import androidx.compose.material.SwitchDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Article
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanntan.su.ui.component.AppIconImage
 import com.kanntan.su.ui.theme.kanntanColors
+import com.kanntan.su.ui.theme.kanntanSwitchColors
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.data.model.AppInfo
 import me.weishu.kernelsu.ui.screen.superuser.GroupedApps
@@ -223,16 +223,7 @@ private fun SuperUserAppItem(
                     checked = group.anyAllowSu,
                     enabled = enabled,
                     onCheckedChange = { onClick() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colors.onPrimaryColor,
-                        checkedTrackColor = colors.primaryColor,
-                        uncheckedThumbColor = colors.primaryColor,
-                        uncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.4f),
-                        disabledCheckedThumbColor = colors.onPrimaryColor,
-                        disabledUncheckedThumbColor = colors.onSecondaryColor.copy(alpha = 0.4f),
-                        disabledCheckedTrackColor = colors.primaryColor.copy(alpha = 0.4f),
-                        disabledUncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.2f)
-                    )
+                    colors = kanntanSwitchColors()
                 )
             }
 
@@ -241,25 +232,40 @@ private fun SuperUserAppItem(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Mirror SelectorButton's box-above-label column so the checkboxes
+                // on both sides sit on the same horizontal line.
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .background(if (group.shouldUmount) colors.primaryColor else Color.Gray)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                if (group.shouldUmount) colors.primaryColor else Color.Gray
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (group.shouldUmount) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = colors.onPrimaryColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "卸载模块",
                         color = colors.onSecondaryColor.copy(alpha = 0.7f),
-                        fontSize = 12.sp
+                        fontSize = 10.sp
                     )
                 }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
                     SelectorButton(
                         label = "默认",

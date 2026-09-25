@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Switch
-import androidx.compose.material.SwitchDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -50,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanntan.su.ui.component.SegmentedSwitchItem
 import com.kanntan.su.ui.theme.kanntanColors
+import com.kanntan.su.ui.theme.kanntanSwitchColors
 import me.weishu.kernelsu.ui.screen.settings.SettingsUiState
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 
@@ -304,16 +304,7 @@ private fun SettingsSwitchItem(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.onPrimaryColor,
-                checkedTrackColor = colors.primaryColor,
-                uncheckedThumbColor = colors.primaryColor,
-                uncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.4f),
-                disabledCheckedThumbColor = colors.onPrimaryColor,
-                disabledUncheckedThumbColor = colors.onSecondaryColor.copy(alpha = 0.4f),
-                disabledCheckedTrackColor = colors.primaryColor.copy(alpha = 0.4f),
-                disabledUncheckedTrackColor = colors.secondaryColor.copy(alpha = 0.2f)
-            )
+            colors = kanntanSwitchColors()
         )
     }
 }

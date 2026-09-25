@@ -2,6 +2,8 @@ package com.kanntan.su.ui.theme
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.material.SwitchColors
+import androidx.compose.material.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
@@ -124,3 +126,27 @@ val LocalKanntanTheme = compositionLocalOf<KanntanThemeState> {
 /** Current customized colors; re-composes when the user changes them. */
 @Composable
 fun kanntanColors(): KanntanColors = LocalKanntanTheme.current.colors.collectAsState().value
+
+/**
+ * Material Design 2 [SwitchColors] tuned for the Kanntan palette.
+ *
+ * The off-state track uses a fixed neutral gray instead of a translucent
+ * [KanntanColors.secondaryColor]: with the stock black/white theme a
+ * translucent white track blends into the white card background and the
+ * toggle looks like a bare dot floating on the card.
+ */
+@Composable
+fun kanntanSwitchColors(colors: KanntanColors = kanntanColors()): SwitchColors =
+    SwitchDefaults.colors(
+        checkedThumbColor = colors.onPrimaryColor,
+        checkedTrackColor = colors.primaryColor,
+        uncheckedThumbColor = colors.onPrimaryColor,
+        uncheckedTrackColor = NeutralSwitchTrack,
+        disabledCheckedThumbColor = colors.onPrimaryColor.copy(alpha = 0.55f),
+        disabledCheckedTrackColor = colors.primaryColor.copy(alpha = 0.38f),
+        disabledUncheckedThumbColor = colors.onPrimaryColor.copy(alpha = 0.55f),
+        disabledUncheckedTrackColor = NeutralSwitchTrack.copy(alpha = 0.38f),
+    )
+
+/** Neutral gray that stays visible on both the light and the dark theme colors. */
+private val NeutralSwitchTrack = Color(0xFF9E9E9E)

@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -292,32 +289,52 @@ private fun ColorSection(
             colors = CardDefaults.cardColors(containerColor = theme.secondaryColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(6),
+            // Plain grid, not LazyVerticalGrid: this screen is itself inside a
+            // verticalScroll column, and nesting a vertically-scrollable lazy grid
+            // there throws at runtime ("Nesting scrollable in the same direction").
+            Column(
                 modifier = Modifier.padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(colors) { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .border(
-                                width = if (color == selectedColor) 3.dp else 0.dp,
-                                color = if (color == selectedColor) theme.primaryColor else Color.Transparent,
-                                shape = CircleShape
+                colors.chunked(PALETTE_COLUMNS).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { color ->
+                            Swatch(
+                                color = color,
+                                isSelected = color == selectedColor,
+                                onClick = { onColorSelected(color) }
                             )
-                            .clickable { onColorSelected(color) }
-                    )
+                        }
+                        // pad the last row so short rows stay left-aligned evenly
+                        repeat(PALETTE_COLUMNS - row.size) {
+                            Spacer(modifier = Modifier.size(40.dp))
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+@Composable
+private fun Swatch(color: Color, isSelected: Boolean, onClick: () -> Unit) {
+    val theme = kanntanColors()
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(color)
+            .border(
+                width = if (isSelected) 3.dp else 0.dp,
+                color = if (isSelected) theme.primaryColor else Color.Transparent,
+                shape = CircleShape
+            )
+            .clickable(onClick = onClick)
+    )
+}
+
 // 主页三个分区的候选色（含默认黑/白）
+private const val PALETTE_COLUMNS = 6
 private val sectionColorOptions = listOf(
     Color(0xFF000000),
     Color(0xFFFFFFFF),
