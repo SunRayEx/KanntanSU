@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material.TextButton
@@ -55,7 +56,11 @@ import com.kanntan.su.ui.util.getDefaultPartition
 import com.kanntan.su.ui.util.installBoot
 import com.kanntan.su.ui.util.rootAvailable
 import me.weishu.kernelsu.ui.screen.install.isKoFile
+import com.kanntan.su.ui.util.FlashResult
 import me.weishu.kernelsu.ui.util.LkmSelection
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,7 +78,12 @@ fun InstallScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var isFlashing by rememberSaveable { mutableStateOf(false) }
+
+    // ksud 的实时输出。libsu 的回调是串行的，所以用一个 buffer 拼接再原子赋值即可。
+    var flashOutput by remember { mutableStateOf("") }
+    var flashRunning by remember { mutableStateOf(false) }
+    var flashResult by remember { mutableStateOf<FlashResult?>(null) }
+    var showOutputDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var partitionSelectionIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -194,7 +204,7 @@ fun InstallScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (isFlashing) {
+            if (flashRunning) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -229,27 +239,41 @@ fun InstallScreen(
                                 Toast.makeText(context, "请先选择安装方式", Toast.LENGTH_SHORT).show()
                                 return@clickable
                             }
-                            isFlashing = true
+                            if (!rootAvailable()) {
+                                Toast.makeText(context, "没有 Root 权限，无法直接刷入", Toast.LENGTH_SHORT).show()
+                                return@clickable
+                            }
+                            flashOutput = ""
+                            flashResult = null
+                            flashRunning = true
+                            showOutputDialog = true
                             scope.launch(Dispatchers.IO) {
                                 val bootUri = when (method) {
                                     is InstallMethod.SelectFile -> method.uri
                                     else -> null
                                 }
+                                val output = StringBuilder()
                                 val result = installBoot(
                                     bootUri = bootUri,
                                     lkm = uiState.lkmSelection,
                                     ota = method == InstallMethod.DirectInstallToInactiveSlot,
                                     partition = partitions.getOrNull(partitionSelectionIndex),
-                                    allowShell = false,
-                                    enableAdb = false,
-                                    onStdout = {},
-                                    onStderr = {},
+                                    allowShell = uiState.allowShell,
+                                    enableAdb = uiState.enableAdb,
+                                    onStdout = { line ->
+                                        output.appendLine(line)
+                                        flashOutput = output.toString()
+                                    },
+                                    onStderr = { line ->
+                                        output.appendLine(line)
+                                        flashOutput = output.toString()
+                                    },
                                 )
                                 withContext(Dispatchers.Main) {
-                                    isFlashing = false
+                                    flashResult = result
+                                    flashRunning = false
                                     if (result.isSuccess) {
                                         Toast.makeText(context, "刷入成功", Toast.LENGTH_SHORT).show()
-                                        onNavigateBack()
                                     } else {
                                         errorMessage = result.error.ifBlank { "未知错误（ksud 无输出）" }
                                     }
@@ -269,11 +293,98 @@ fun InstallScreen(
         }
     }
 
+    if (showOutputDialog) {
+        FlashOutputDialog(
+            running = flashRunning,
+            output = flashOutput,
+            result = flashResult,
+            onDismiss = {
+                showOutputDialog = false
+                if (flashResult?.isSuccess == true) onNavigateBack()
+            }
+        )
+    }
+
     errorMessage?.let { message ->
         KanntanErrorDialog(
             message = message,
             onDismiss = { errorMessage = null }
         )
+    }
+}
+
+@Composable
+private fun FlashOutputDialog(
+    running: Boolean,
+    output: String,
+    result: FlashResult?,
+    onDismiss: () -> Unit
+) {
+    val colors = kanntanColors()
+    val scrollState = rememberScrollState()
+    LaunchedEffect(output) {
+        // 跟随最新输出滚动到底部
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+    Dialog(onDismissRequest = { if (!running) onDismiss() }) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = when {
+                        running -> "正在刷入…"
+                        result != null && result.isSuccess -> "刷入成功"
+                        result != null -> "刷入失败"
+                        else -> "准备中…"
+                    },
+                    color = colors.onSecondaryColor,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (!running && result != null && result.error.isNotBlank()) {
+                    Text(
+                        text = result.error,
+                        color = colors.onSecondaryColor.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (running) {
+                    LinearProgressIndicator(
+                        color = colors.primaryColor,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                Text(
+                    text = output.ifBlank { if (running) "等待输出…" else "(无输出)" },
+                    color = colors.onSecondaryColor.copy(alpha = 0.8f),
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(scrollState)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    androidx.compose.material3.TextButton(
+                        enabled = !running,
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.textButtonColors(contentColor = colors.primaryColor)
+                    ) {
+                        Text(text = "关闭", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -286,7 +397,7 @@ private fun KanntanErrorDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         buttons = {
-            TextButton(onClick = onDismiss) {
+            androidx.compose.material.TextButton(onClick = onDismiss) {
                 Text("确定", color = colors.primaryColor)
             }
         },
