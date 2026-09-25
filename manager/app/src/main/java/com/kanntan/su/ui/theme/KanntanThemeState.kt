@@ -2,6 +2,7 @@ package com.kanntan.su.ui.theme
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.material.SwitchColors
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import java.io.File
+import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -204,32 +206,35 @@ fun rememberThemeImage(path: String?): ImageBitmap? {
 }
 
 /**
- * Decode [path] (app-private file or a persisted content uri), sub-sampled so a
- * multi-megapixel photo can't OOM the app.
+ * Decode [path] (app-private file or a persisted content uri) as an [ImageBitmap],
+ * sub-sampled so a multi-megapixel photo can't OOM the app.
  */
-private fun decodeSampledImage(context: Context, path: String): ImageBitmap? {
+private fun decodeSampledImage(context: Context, path: String): ImageBitmap? =
+    decodeSampledBitmap(context, path)?.asImageBitmap()
+
+/**
+ * Same decoding as [decodeSampledImage] but returns a platform [Bitmap], e.g. for
+ * running it through the Android Palette API.
+ */
+fun decodeSampledBitmap(context: Context, path: String): Bitmap? {
     return runCatching {
         // Prefer our own private copy; fall back to a content uri if that's what was stored.
-        val file = File(path)
-        val input = if (file.isFile) {
-            file.inputStream()
-        } else {
-            context.contentResolver.openInputStream(Uri.parse(path)) ?: return null
+        val isFile = File(path).isFile
+        fun openStream(): InputStream? =
+            if (isFile) File(path).inputStream()
+            else context.contentResolver.openInputStream(Uri.parse(path))
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        openStream()?.use { BitmapFactory.decodeStream(it, null, bounds) }
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = calculateSampleSize(
+                bounds.outWidth.takeIf { it > 0 } ?: 1,
+                bounds.outHeight.takeIf { it > 0 } ?: 1,
+            )
         }
-        input.use { stream ->
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeStream(stream, null, bounds)
-            val options = BitmapFactory.Options().apply {
-                inSampleSize = calculateSampleSize(
-                    bounds.outWidth.takeIf { it > 0 } ?: 1,
-                    bounds.outHeight.takeIf { it > 0 } ?: 1,
-                )
-            }
-            // Re-open: decodeStream consumed the stream during the bounds pass.
-            val decodeInput = if (file.isFile) file.inputStream()
-            else context.contentResolver.openInputStream(Uri.parse(path)) ?: return null
-            decodeInput.use { BitmapFactory.decodeStream(it, null, options) }
-        }?.asImageBitmap()
+        // Re-open: decodeStream consumed the stream during the bounds pass.
+        openStream()?.use { BitmapFactory.decodeStream(it, null, options) }
     }.getOrNull()
 }
 

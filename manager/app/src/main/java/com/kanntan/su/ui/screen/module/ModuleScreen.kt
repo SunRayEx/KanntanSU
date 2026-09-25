@@ -1,5 +1,8 @@
 package com.kanntan.su.ui.screen.module
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,45 +13,61 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Switch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kanntan.su.ui.component.dialog.UninstallDialog
 import com.kanntan.su.ui.theme.kanntanColors
 import com.kanntan.su.ui.theme.kanntanSwitchColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.ui.screen.module.ModuleActions
+import me.weishu.kernelsu.ui.util.FlashResult
+import me.weishu.kernelsu.ui.util.flashModule
 import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
 
 @Composable
@@ -79,6 +98,35 @@ fun ModuleScreen(
     var showUninstallDialog by remember { mutableStateOf<Module?>(null) }
     var lastUninstalled by remember { mutableStateOf<Module?>(null) }
     val colors = kanntanColors()
+    val scope = rememberCoroutineScope()
+
+    // Module install: pick a flashable zip via SAF, stream ksud's output into a dialog.
+    var installRunning by remember { mutableStateOf(false) }
+    var installOutput by remember { mutableStateOf("") }
+    var installResult by remember { mutableStateOf<FlashResult?>(null) }
+
+    val zipPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        installOutput = ""
+        installResult = null
+        installRunning = true
+        // flashModule blocks on a root shell, so it must never run on the main thread.
+        scope.launch {
+            val output = StringBuilder()
+            val result = withContext(Dispatchers.IO) {
+                flashModule(
+                    uri = uri,
+                    onStdout = { output.appendLine(it); installOutput = output.toString() },
+                    onStderr = { output.appendLine(it); installOutput = output.toString() }
+                )
+            }
+            installResult = result
+            installRunning = false
+            if (result.code == 0) {
+                viewModel.fetchModuleList(checkUpdate = true)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.initializePreferences()
@@ -92,7 +140,8 @@ fun ModuleScreen(
     ) {
         ModuleHeader(
             onBackClick = onNavigateBack,
-            onRefreshClick = { viewModel.fetchModuleList(checkUpdate = true) }
+            onRefreshClick = { viewModel.fetchModuleList(checkUpdate = true) },
+            onInstallClick = { zipPicker.launch("application/zip") }
         )
 
         // Undo strip: uninstalling a module is reversible until reboot, so offer a one-tap revert.
@@ -126,7 +175,7 @@ fun ModuleScreen(
         if (uiState.isRefreshing && !uiState.hasLoaded) {
             LoadingContent()
         } else if (uiState.moduleList.isEmpty()) {
-            EmptyContent()
+            EmptyContent(onInstallClick = { zipPicker.launch("application/zip") })
         } else {
             ModuleList(
                 modules = uiState.moduleList,
@@ -149,12 +198,25 @@ fun ModuleScreen(
             onDismiss = { showUninstallDialog = null }
         )
     }
+
+    if (installRunning || installResult != null) {
+        InstallModuleDialog(
+            running = installRunning,
+            output = installOutput,
+            result = installResult,
+            onDismiss = {
+                installOutput = ""
+                installResult = null
+            }
+        )
+    }
 }
 
 @Composable
 private fun ModuleHeader(
     onBackClick: () -> Unit,
-    onRefreshClick: () -> Unit
+    onRefreshClick: () -> Unit,
+    onInstallClick: () -> Unit
 ) {
     val colors = kanntanColors()
     Row(
@@ -185,13 +247,23 @@ private fun ModuleHeader(
             )
         }
 
-        IconButton(onClick = onRefreshClick) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "Refresh",
-                tint = colors.onPrimaryColor,
-                modifier = Modifier.size(24.dp)
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onInstallClick) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Install module",
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            IconButton(onClick = onRefreshClick) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    tint = colors.onPrimaryColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
@@ -212,7 +284,7 @@ private fun LoadingContent() {
 }
 
 @Composable
-private fun EmptyContent() {
+private fun EmptyContent(onInstallClick: () -> Unit = {}) {
     val colors = kanntanColors()
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -231,6 +303,16 @@ private fun EmptyContent() {
                 color = colors.onSecondaryColor,
                 fontSize = 14.sp
             )
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = onInstallClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primaryColor,
+                    contentColor = colors.onPrimaryColor
+                )
+            ) {
+                Text(text = "安装模块", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -406,6 +488,80 @@ private fun ActionButton(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+/**
+ * Streams ksud's `module install` output. ksud writes progress to stdout/stderr as it
+ * goes, so showing the live log beats a bare spinner — and on failure the exit code and
+ * stderr are right there.
+ */
+@Composable
+private fun InstallModuleDialog(
+    running: Boolean,
+    output: String,
+    result: FlashResult?,
+    onDismiss: () -> Unit
+) {
+    val colors = kanntanColors()
+    Dialog(onDismissRequest = { if (!running) onDismiss() }) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.secondaryColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = when {
+                        running -> "正在安装模块…"
+                        result != null && result.code == 0 -> "安装完成"
+                        else -> "安装失败"
+                    },
+                    color = colors.onSecondaryColor,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (!running && result != null && result.err.isNotBlank()) {
+                    Text(
+                        text = result.err,
+                        color = colors.onSecondaryColor.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (running) {
+                    LinearProgressIndicator(
+                        color = colors.primaryColor,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                Text(
+                    text = output.ifBlank { if (running) "等待输出…" else "(无输出)" },
+                    color = colors.onSecondaryColor.copy(alpha = 0.8f),
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 260.dp)
+                        .verticalScroll(rememberScrollState())
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        enabled = !running,
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.textButtonColors(contentColor = colors.primaryColor)
+                    ) {
+                        Text(text = "关闭", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }

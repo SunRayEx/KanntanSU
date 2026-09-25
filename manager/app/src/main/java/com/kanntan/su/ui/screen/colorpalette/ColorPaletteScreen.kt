@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -34,8 +36,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,11 +51,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.palette.graphics.Palette
+import com.kanntan.su.ui.theme.DefaultKanntanColors
 import com.kanntan.su.ui.theme.LocalKanntanTheme
+import com.kanntan.su.ui.theme.decodeSampledBitmap
 import com.kanntan.su.ui.theme.kanntanColors
 import com.kanntan.su.ui.theme.kanntanImages
 import com.kanntan.su.ui.theme.rememberThemeImage
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Color Palette Screen - 主题自定义页面
@@ -100,32 +111,32 @@ fun ColorPaletteScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // 主页上半部分（大按钮区域）
-            ColorSection(
+            // 主页上半部分（大按钮区域）— 预设色板 / 自定义图片两个抽屉
+            DrawerColorSection(
                 title = "主页上半部分",
-                colors = sectionColorOptions,
                 selectedColor = colors.topColor,
-                onColorSelected = { theme.setTopColor(it) }
+                onColorSelected = { theme.setTopColor(it) },
+                onClear = { theme.setTopColor(DefaultKanntanColors.topColor) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // 主页中间内容部分
-            ColorSection(
+            DrawerColorSection(
                 title = "主页中间内容部分",
-                colors = sectionColorOptions,
                 selectedColor = colors.middleColor,
-                onColorSelected = { theme.setMiddleColor(it) }
+                onColorSelected = { theme.setMiddleColor(it) },
+                onClear = { theme.setMiddleColor(DefaultKanntanColors.middleColor) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // 主页下半部分（按钮区域）
-            ColorSection(
+            DrawerColorSection(
                 title = "主页下半部分",
-                colors = sectionColorOptions,
                 selectedColor = colors.bottomColor,
-                onColorSelected = { theme.setBottomColor(it) }
+                onColorSelected = { theme.setBottomColor(it) },
+                onClear = { theme.setBottomColor(DefaultKanntanColors.bottomColor) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -323,6 +334,237 @@ private fun PreviewCard(colors: com.kanntan.su.ui.theme.KanntanColors) {
     }
 }
 
+/**
+ * 上/中/下三分区的取色器：两个抽屉。
+ *  - 「预设调色板」：Material Design 2 标准色板；
+ *  - 「自定义图片」：选一张图，用 Android Palette API 提取其中 8 种主色再选一个。
+ *
+ * 在任一抽屉里选定颜色后，另一抽屉即隐藏；只有点击当前抽屉的「取消」或页面底部的
+ * 「恢复默认」才会重新展开两者。
+ */
+@Composable
+private fun DrawerColorSection(
+    title: String,
+    selectedColor: Color,
+    onColorSelected: (Color) -> Unit,
+    onClear: () -> Unit
+) {
+    val theme = kanntanColors()
+    val context = LocalContext.current
+
+    // null = 两个抽屉都显示；选定颜色后锁定为该抽屉，另一抽屉隐藏
+    var activeDrawer by remember { mutableStateOf<DrawerKind?>(null) }
+    var presetExpanded by remember { mutableStateOf(true) }
+    var imageExpanded by remember { mutableStateOf(false) }
+    var imagePath by remember { mutableStateOf<String?>(null) }
+    var extractedColors by remember { mutableStateOf<List<Color>>(emptyList()) }
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            imagePath = copyImageToPrivateStorage(context, uri, "palette_${title.hashCode()}")
+            imageExpanded = true
+        }
+    }
+
+    // Palette 生成是 CPU 密集型，放到 IO 线程
+    LaunchedEffect(imagePath) {
+        val path = imagePath
+        extractedColors = if (path == null) {
+            emptyList()
+        } else {
+            withContext(Dispatchers.IO) {
+                decodeSampledBitmap(context, path)?.let { bitmap ->
+                    Palette.from(bitmap).generate()
+                        .swatches
+                        .sortedByDescending { swatch -> swatch.population }
+                        .take(PALETTE_COLOR_COUNT)
+                        .map { swatch -> Color(swatch.rgb) }
+                } ?: emptyList()
+            }
+        }
+    }
+
+    Column {
+        Text(
+            text = title,
+            color = theme.onMiddleColor.copy(alpha = 0.7f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = theme.secondaryColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            // —— 抽屉一：预设调色板（选了图片色后隐藏）——
+            if (activeDrawer != DrawerKind.Image) {
+                Drawer(
+                    title = "预设调色板",
+                    expanded = presetExpanded,
+                    onToggle = { presetExpanded = !presetExpanded },
+                    showCancel = activeDrawer == DrawerKind.Preset,
+                    onCancel = {
+                        activeDrawer = null
+                        onClear()
+                    }
+                ) {
+                    SwatchGrid(
+                        colors = md2StandardPalette,
+                        selectedColor = selectedColor,
+                        onSelected = {
+                            onColorSelected(it)
+                            activeDrawer = DrawerKind.Preset
+                            presetExpanded = true
+                        }
+                    )
+                }
+            }
+
+            // —— 抽屉二：自定义图片（选了预设色后隐藏）——
+            if (activeDrawer != DrawerKind.Preset) {
+                Drawer(
+                    title = "自定义图片",
+                    expanded = imageExpanded,
+                    onToggle = { imageExpanded = !imageExpanded },
+                    showCancel = activeDrawer == DrawerKind.Image,
+                    onCancel = {
+                        activeDrawer = null
+                        onClear()
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { imagePicker.launch("image/*") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = theme.primaryColor,
+                                contentColor = theme.onPrimaryColor
+                            )
+                        ) {
+                            Text(text = "选择图片", fontWeight = FontWeight.Bold)
+                        }
+                        if (imagePath != null) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = { imagePath = null }) {
+                                Text(
+                                    text = "移除图片",
+                                    color = theme.onSecondaryColor.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+
+                    when {
+                        imagePath != null && extractedColors.isEmpty() -> Text(
+                            text = "正在提取颜色…",
+                            color = theme.onSecondaryColor.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+
+                        extractedColors.isNotEmpty() -> SwatchGrid(
+                            colors = extractedColors,
+                            selectedColor = selectedColor,
+                            onSelected = {
+                                onColorSelected(it)
+                                activeDrawer = DrawerKind.Image
+                                imageExpanded = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Drawer(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    showCancel: Boolean,
+    onCancel: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val theme = kanntanColors()
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Default.KeyboardArrowDown
+                    } else {
+                        Icons.Default.KeyboardArrowRight
+                    },
+                    contentDescription = null,
+                    tint = theme.onSecondaryColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = title,
+                    color = theme.onSecondaryColor,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (showCancel) {
+                TextButton(onClick = onCancel) {
+                    Text(
+                        text = "取消",
+                        color = theme.onSecondaryColor.copy(alpha = 0.7f),
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+        if (expanded) {
+            content()
+        }
+    }
+}
+
+/**
+ * 非懒加载的色板网格：在 verticalScroll 内嵌套 LazyVerticalGrid 会运行时崩溃。
+ */
+@Composable
+private fun SwatchGrid(
+    colors: List<Color>,
+    selectedColor: Color,
+    onSelected: (Color) -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        colors.chunked(PALETTE_COLUMNS).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { color ->
+                    Swatch(
+                        color = color,
+                        isSelected = color == selectedColor,
+                        onClick = { onSelected(color) }
+                    )
+                }
+                // pad the last row so short rows stay left-aligned evenly
+                repeat(PALETTE_COLUMNS - row.size) {
+                    Spacer(modifier = Modifier.size(40.dp))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ColorSection(
     title: String,
@@ -346,26 +588,11 @@ private fun ColorSection(
             // Plain grid, not LazyVerticalGrid: this screen is itself inside a
             // verticalScroll column, and nesting a vertically-scrollable lazy grid
             // there throws at runtime ("Nesting scrollable in the same direction").
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                colors.chunked(PALETTE_COLUMNS).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { color ->
-                            Swatch(
-                                color = color,
-                                isSelected = color == selectedColor,
-                                onClick = { onColorSelected(color) }
-                            )
-                        }
-                        // pad the last row so short rows stay left-aligned evenly
-                        repeat(PALETTE_COLUMNS - row.size) {
-                            Spacer(modifier = Modifier.size(40.dp))
-                        }
-                    }
-                }
-            }
+            SwatchGrid(
+                colors = colors,
+                selectedColor = selectedColor,
+                onSelected = onColorSelected
+            )
         }
     }
 }
@@ -491,27 +718,37 @@ private fun Swatch(color: Color, isSelected: Boolean, onClick: () -> Unit) {
     )
 }
 
-// 主页三个分区的候选色（含默认黑/白）
+// 每个分区抽屉中「自定义图片」最多提取的颜色数
+private const val PALETTE_COLOR_COUNT = 8
+
+private enum class DrawerKind { Preset, Image }
+
+// 色板网格的列数
 private const val PALETTE_COLUMNS = 6
-private val sectionColorOptions = listOf(
-    Color(0xFF000000),
-    Color(0xFFFFFFFF),
-    Color(0xFF1C1C1C),
-    Color(0xFF333333),
-    Color(0xFF4A4A4A),
-    Color(0xFF8A8A8A),
-    Color(0xFFC8C8C8),
-    Color(0xFFE0E0E0),
-    Color(0xFFF5F5F5),
-    Color(0xFF1A237E),
-    Color(0xFF0D47A1),
-    Color(0xFF004D40),
-    Color(0xFF1B5E20),
-    Color(0xFF33691E),
-    Color(0xFFE65100),
-    Color(0xFF880E4F),
-    Color(0xFF4A148C),
-    Color(0xFFB71C1C),
+
+/** Material Design 2 标准色板：全部色相的 500 色阶 + 黑/白 */
+private val md2StandardPalette = listOf(
+    Color(0xFFF44336), // Red 500
+    Color(0xFFE91E63), // Pink 500
+    Color(0xFF9C27B0), // Purple 500
+    Color(0xFF673AB7), // Deep Purple 500
+    Color(0xFF3F51B5), // Indigo 500
+    Color(0xFF2196F3), // Blue 500
+    Color(0xFF03A9F4), // Light Blue 500
+    Color(0xFF00BCD4), // Cyan 500
+    Color(0xFF009688), // Teal 500
+    Color(0xFF4CAF50), // Green 500
+    Color(0xFF8BC34A), // Light Green 500
+    Color(0xFFCDDC39), // Lime 500
+    Color(0xFFFFEB3B), // Yellow 500
+    Color(0xFFFFC107), // Amber 500
+    Color(0xFFFF9800), // Orange 500
+    Color(0xFFFF5722), // Deep Orange 500
+    Color(0xFF795548), // Brown 500
+    Color(0xFF9E9E9E), // Grey 500
+    Color(0xFF607D8B), // Blue Grey 500
+    Color(0xFF000000), // Black
+    Color(0xFFFFFFFF), // White
 )
 
 // 主题色候选（默认黑/白 + 常见强调色）
