@@ -1,5 +1,10 @@
 package com.kanntan.su.ui.screen.colorpalette
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,11 +40,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanntan.su.ui.theme.LocalKanntanTheme
 import com.kanntan.su.ui.theme.kanntanColors
+import com.kanntan.su.ui.theme.kanntanImages
+import com.kanntan.su.ui.theme.rememberThemeImage
+import java.io.File
 
 /**
  * Color Palette Screen - 主题自定义页面
@@ -52,6 +64,26 @@ fun ColorPaletteScreen(
 ) {
     val theme = LocalKanntanTheme.current
     val colors by theme.colors.collectAsState()
+    val images by theme.images.collectAsState()
+    val context = LocalContext.current
+
+    // "image/*" so the picker offers photos and saved images alike.
+    val backgroundLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            copyImageToPrivateStorage(context, uri, "background")
+                ?.let(theme::setBackgroundImage)
+        }
+    }
+    val statusLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            copyImageToPrivateStorage(context, uri, "status")
+                ?.let(theme::setStatusImage)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -114,6 +146,28 @@ fun ColorPaletteScreen(
                 colors = themeColorOptions,
                 selectedColor = colors.secondaryColor,
                 onColorSelected = { theme.setSecondaryColor(it) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 自定义背景图片（替换主页中间内容底色）
+            ImageSection(
+                title = "主页背景图片",
+                description = "替换主页中间内容区域的底色",
+                imagePath = images.backgroundImagePath,
+                onPick = { backgroundLauncher.launch("image/*") },
+                onClear = { theme.setBackgroundImage(null) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // KernelSU 状态按钮图片（替换主页顶部 96dp 方块）
+            ImageSection(
+                title = "KernelSU 状态按钮图片",
+                description = "替换主页顶部状态区的方块图案",
+                imagePath = images.statusImagePath,
+                onPick = { statusLauncher.launch("image/*") },
+                onClear = { theme.setStatusImage(null) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -314,6 +368,110 @@ private fun ColorSection(
             }
         }
     }
+}
+
+/**
+ * Picker row for one customizable theme image.
+ *
+ * The picked file is copied into app-private storage so it survives reboots
+ * without holding a long-lived content-uri permission.
+ */
+@Composable
+private fun ImageSection(
+    title: String,
+    description: String,
+    imagePath: String?,
+    onPick: () -> Unit,
+    onClear: () -> Unit,
+) {
+    val theme = kanntanColors()
+    val bitmap = rememberThemeImage(imagePath)
+
+    Column {
+        Text(
+            text = title,
+            color = theme.onMiddleColor.copy(alpha = 0.7f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = theme.secondaryColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Preview square: the image once decoded, else the color it would replace.
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (bitmap != null) Color.Transparent else theme.middleColor)
+                ) {
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (imagePath == null) description else "已设置",
+                        color = theme.onSecondaryColor.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onPick,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = theme.primaryColor,
+                                contentColor = theme.onPrimaryColor
+                            )
+                        ) {
+                            Text(text = "选择图片", fontWeight = FontWeight.Bold)
+                        }
+                        if (imagePath != null) {
+                            TextButton(onClick = onClear) {
+                                Text(
+                                    text = "清除",
+                                    color = theme.onSecondaryColor.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Copy [uri] into app-private storage under [name], returning the absolute path. */
+private fun copyImageToPrivateStorage(context: Context, uri: Uri, name: String): String? {
+    return runCatching {
+        val dir = File(context.filesDir, "theme").apply { mkdirs() }
+        val extension = when (context.contentResolver.getType(uri)?.substringAfter('/')) {
+            "png" -> "png"
+            "webp" -> "webp"
+            "gif" -> "gif"
+            else -> "jpg"
+        }
+        val file = File(dir, "$name.$extension")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        } ?: return@runCatching null
+        file.absolutePath
+    }.getOrNull()
 }
 
 @Composable

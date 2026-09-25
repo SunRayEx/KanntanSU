@@ -39,6 +39,7 @@ data class HomeUiState(
     
     /**
      * Get KSU status message for display
+     * Returns: "is Ready", "is Not Ready", "is Unsupport", "is can Privilege"
      */
     fun getKSUStatusMessage(): String {
         val status = determineKSUStatus(
@@ -48,15 +49,11 @@ data class HomeUiState(
             requiresNewKernel = false
         )
         return when (status) {
-            // Root 已可用，KernelSU 正常工作
-            SystemInfo.KSUStatus.READY -> "Ready · 已获得 Root"
-            // 没有检测到内核模块：尚未刷入或刷入后未重启
-            SystemInfo.KSUStatus.NOT_READY -> "Not Ready · 未检测到内核模块"
-            SystemInfo.KSUStatus.UNSUPPORT -> "Unsupport · 需要更新内核"
-            // 内核已加载且已认本应用为管理器，只是尚未提权到 Root：点击顶部即可提权
-            // （SELinux 宽容时走 Magica 提权，否则跳转刷入）
-            SystemInfo.KSUStatus.CAN_PRIVILEGE -> "Can Privilege · 可提权，点击顶部获取 Root"
-            SystemInfo.KSUStatus.UNKNOWN -> "Unknown · 未知"
+            SystemInfo.KSUStatus.READY -> "Ready"
+            SystemInfo.KSUStatus.NOT_READY -> "Not Ready"
+            SystemInfo.KSUStatus.UNSUPPORT -> "Unsupport"
+            SystemInfo.KSUStatus.CAN_PRIVILEGE -> "can Privilege"
+            SystemInfo.KSUStatus.UNKNOWN -> "Unknown"
         }
     }
 }

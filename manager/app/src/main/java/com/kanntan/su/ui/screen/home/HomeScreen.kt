@@ -16,6 +16,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -54,6 +55,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kanntan.su.ui.theme.kanntanColors
+import com.kanntan.su.ui.theme.kanntanImages
+import com.kanntan.su.ui.theme.rememberThemeImage
 
 // 固定尺寸常量，确保不同区域使用一致的块尺寸以便精确对齐
 private val SMALL_BLOCK_DP = 48.dp
@@ -87,14 +91,26 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val colors = kanntanColors()
-    
+    val backgroundImage = rememberThemeImage(kanntanImages().backgroundImagePath)
+
     LaunchedEffect(Unit) { viewModel.refresh() }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.middleColor)
     ) {
+        // Optional custom background: drawn behind everything, so the solid
+        // header/footer colors still frame it and the content stays readable.
+        if (backgroundImage != null) {
+            Image(
+                bitmap = backgroundImage,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
         Column(modifier = Modifier.fillMaxSize()) {
             // Header Area
             HeaderArea(
@@ -154,15 +170,28 @@ private fun HeaderArea(
     onHeaderClick: () -> Unit
 ) {
     val colors = kanntanColors()
+    // Optional custom image for the KernelSU status block; when present it takes
+    // the place of the signature white square.
+    val statusImage = rememberThemeImage(kanntanImages().statusImagePath)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(HEADER_HEIGHT_DP)
             .background(colors.topColor)
     ) {
-        // 白块 - 在底层(left=0, top约40%高度)
-        // 使用常量尺寸确保与 Footer 的小黑块一致，从而能在不同区域实现精确对齐
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        if (statusImage != null) {
+            Image(
+                bitmap = statusImage,
+                contentDescription = null,
+                modifier = Modifier
+                    .offset(x = 0.dp, y = HEADER_HEIGHT_DP * 0.18f)
+                    .size(WHITE_SQUARE_SIZE_DP),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            // 白块 - 在底层(left=0, top约40%高度)
+            // 使用常量尺寸确保与 Footer 的小黑块一致，从而能在不同区域实现精确对齐
+            Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasWidth = size.width
             val canvasHeight = size.height
 
@@ -194,6 +223,8 @@ private fun HeaderArea(
             )
         }
         
+        }
+
         // 文字 - 在上层，保证位于白块右侧
         Box(
             modifier = Modifier
